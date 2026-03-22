@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>3D Dungeon - Ray Casting FPS</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  #game-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+  canvas { display: block; }
+
+  /* ── スライダーオーバーレイ（Bottom UI 領域: y=500, h=200） ── */
+  #controls {
+    position: absolute;
+    left: 0;
+    top: 500px;
+    width: 1000px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 60px;
+    pointer-events: none;
+  }
+
+  .ctrl-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: all;
+  }
+
+  .ctrl-label {
+    color: #999;
+    font: 13px monospace;
+    letter-spacing: 0.05em;
+    text-align: center;
+  }
+  .ctrl-label .val {
+    color: #7ecfb0;
+    font-weight: bold;
+    font-size: 15px;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 220px;
+    height: 4px;
+    background: #3a4a44;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #7ecfb0;
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(126,207,176,0.6);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #7ecfb0;
+    border-radius: 50%;
+    border: none;
+  }
+
+  .range-minmax {
+    display: flex;
+    justify-content: space-between;
+    width: 220px;
+    color: #555;
+    font: 11px monospace;
+    margin-top: -4px;
+  }
+
+  #btn-generate {
+    padding: 9px 28px;
+    background: #0e2018;
+    color: #7ecfb0;
+    border: 1px solid #3a6a50;
+    font: 14px monospace;
+    cursor: pointer;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    transition: background 0.15s;
+    pointer-events: all;
+  }
+  #btn-generate:hover { background: #1a3a28; border-color: #7ecfb0; }
+  #btn-generate:active { background: #0a1510; }
+</style>
+</head>
+<body>
+<div id="game-wrapper">
+  <canvas id="c"></canvas>
+
+  <div id="controls">
+
+    <!-- Grid Size スライダー -->
+    <div class="ctrl-group">
+      <div class="ctrl-label">
+        Grid Size&nbsp;&nbsp;<span class="val" id="label-grid">13</span> × <span class="val" id="label-grid2">13</span>
+      </div>
+      <input type="range" id="slider-grid" min="7" max="25" step="2" value="13">
+      <div class="range-minmax"><span>7×7</span><span>25×25</span></div>
+    </div>
+
+    <!-- Extra Loops スライダー -->
+    <div class="ctrl-group">
+      <div class="ctrl-label">
+        Extra Loops&nbsp;&nbsp;<span class="val" id="label-loops">10</span>
+      </div>
+      <input type="range" id="slider-loops" min="0" max="40" step="1" value="10">
+      <div class="range-minmax"><span>0 (純粋迷路)</span><span>40</span></div>
+    </div>
+
+    <!-- 生成ボタン -->
+    <div class="ctrl-group">
+      <button id="btn-generate">⟳ Generate New Maze</button>
+      <div class="ctrl-label" style="color:#555">( or press R )</div>
+    </div>
+
+  </div>
+</div>
+<script src="main.js"></script>
+</body>
+</html>

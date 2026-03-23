@@ -252,6 +252,25 @@ function generateMaze(size) {
     const horiz = c > 0 && c < size - 1 && g[r][c-1] === 0 && g[r][c+1] === 0;
     if (vert || horiz) { g[r][c] = 0; added++; }
   }
+
+  // Reduce dead ends: detect cells with only 1 open neighbor and break one adjacent wall
+  const DIRS4 = [[-1,0],[1,0],[0,-1],[0,1]];
+  for (let r = 1; r < size - 1; r++) {
+    for (let c = 1; c < size - 1; c++) {
+      if (g[r][c] !== 0) continue;
+      const openDirs = DIRS4.filter(([dr,dc]) => g[r+dr][c+dc] === 0);
+      if (openDirs.length !== 1) continue; // dead end = 通路が1方向のみ
+      // 壁方向のうち境界内のものをランダムに1つ開ける
+      const wallDirs = DIRS4.filter(([dr,dc]) => {
+        const nr = r+dr, nc = c+dc;
+        return nr > 0 && nr < size-1 && nc > 0 && nc < size-1 && g[nr][nc] === 1;
+      });
+      if (wallDirs.length === 0) continue;
+      const [dr,dc] = wallDirs[Math.floor(Math.random() * wallDirs.length)];
+      g[r+dr][c+dc] = 0;
+    }
+  }
+
   return g;
 }
 

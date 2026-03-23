@@ -365,18 +365,26 @@ function trySpawnFromCrystal(cr) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function makeUnit(type, r, c) {
   const d = UNIT_DEFS[type];
+  const faction = d.faction;
+  // AI勢力はスポーン時にランダムなターゲットを割り当て、プレイヤー勢力はnull
+  const isAI = faction !== 'human';
+  const targetCrystal = isAI
+    ? (crystals.filter(cr => cr.owner !== faction)[Math.floor(Math.random() * crystals.filter(cr => cr.owner !== faction).length)] ?? null)
+    : null;
   return {
     type, r, c,
-    emoji:     d.emoji,
-    faction:   d.faction,
-    hp:        d.hp,
-    maxHp:     d.hp,
-    atk:       d.atk,
-    spd:       d.spd,
-    path:      null,
-    pathTimer: Math.random() * 2,  // stagger initial BFS calls
-    moveTimer: 0,
-    inCombat:  false,
+    emoji:         d.emoji,
+    faction,
+    hp:            d.hp,
+    maxHp:         d.hp,
+    atk:           d.atk,
+    spd:           d.spd,
+    path:          null,
+    pathTimer:     Math.random() * 2,  // stagger initial BFS calls
+    moveTimer:     0,
+    inCombat:      false,
+    targetCrystal, // 現在の目標クリスタル（AI勢力のみ使用）
+    retargetTimer: newRetargetInterval(), // 次の再評価までの残り秒数
   };
 }
 
@@ -388,6 +396,18 @@ function bestTarget(unit) {
     if (d < bestDist) { bestDist = d; best = cr; }
   }
   return best;
+}
+
+// 自勢力以外のクリスタルをランダムに1つ返す（なければ null）
+function randomTarget(unit) {
+  const candidates = crystals.filter(cr => cr.owner !== unit.faction);
+  if (candidates.length === 0) return null;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+// 再評価タイマーの初期値（10〜20秒のランダム）
+function newRetargetInterval() {
+  return 10 + Math.random() * 10;
 }
 
 function updateUnits(dt) {
@@ -423,14 +443,40 @@ function updateUnits(dt) {
       const prevName = FACTIONS[prev]?.name ?? '中立';
       logEvent(`${FACTIONS[u.faction].name} がクリスタルを占領 (${prevName} → ${FACTIONS[u.faction].name})`);
       u.path = null;
-      u.pathTimer = 0;  // find next target immediately
+      u.pathTimer = 0;
+      // 占領後は必ず別のターゲットに再割り当て
+      if (u.targetCrystal !== undefined) {
+        u.targetCrystal = randomTarget(u);
+        u.retargetTimer = newRetargetInterval();
+      }
+    }
+
+    // ── Retarget timer (AI勢力のみ) ──
+    if (u.targetCrystal !== undefined) {
+      u.retargetTimer -= dt;
+      if (u.retargetTimer <= 0) {
+        if (Math.random() < 0.5) {
+          // 50%: 別のクリスタルに変更
+          u.targetCrystal = randomTarget(u);
+          u.path = null;
+          u.pathTimer = 0;
+        }
+        // 50%: 現ターゲット維持（タイマーのみリセット）
+        u.retargetTimer = newRetargetInterval();
+      }
+      // ターゲットが既に自勢力に変わっていたら即再割り当て
+      if (u.targetCrystal && u.targetCrystal.owner === u.faction) {
+        u.targetCrystal = randomTarget(u);
+        u.path = null;
+        u.pathTimer = 0;
+      }
     }
 
     // ── Pathfinding refresh ──
     u.pathTimer -= dt;
     if (u.pathTimer <= 0) {
       u.pathTimer = PATH_REFRESH;
-      const target = bestTarget(u);
+      const target = (u.targetCrystal !== undefined) ? u.targetCrystal : bestTarget(u);
       u.path = target ? bfs(u.r, u.c, target.r, target.c) : null;
     }
 

@@ -495,7 +495,7 @@ function updateUnits(dt) {
     u.pathTimer -= dt;
     if (u.pathTimer <= 0) {
       u.pathTimer = PATH_REFRESH;
-      const target = (u.targetCrystal !== undefined) ? u.targetCrystal : bestTarget(u);
+      const target = u.targetCrystal ? u.targetCrystal : bestTarget(u);
       u.path = target ? bfs(u.r, u.c, target.r, target.c) : null;
     }
 

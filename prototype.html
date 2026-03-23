@@ -330,7 +330,7 @@ function initCrystals() {
       crystals.push({
         r, c,
         owner: z.owner,
-        spawnTimer: Math.random() * SPAWN_INTERVAL,
+        spawnTimer: Math.random() * AI_SPAWN[z.owner],
       });
     }
   }

@@ -113,9 +113,9 @@ canvas {
     <div class="panel">
       <div class="panel-title">⚔️ スポーン</div>
       <div class="hint">青いクリスタル 💎 をクリック</div>
-      <button class="spawn-btn active" id="btn-human" onclick="selectType('human')">👤 人間   HP:30 ATK:5  SPD:普</button>
-      <button class="spawn-btn"        id="btn-elf"   onclick="selectType('elf')"  >🧝 エルフ HP:20 ATK:8  SPD:速</button>
-      <button class="spawn-btn"        id="btn-dwarf" onclick="selectType('dwarf')">⛏ ドワーフHP:50 ATK:4  SPD:遅</button>
+      <button class="spawn-btn active" id="btn-human" onclick="selectType('human')">👤 人間   HP:30 ATK:5</button>
+      <button class="spawn-btn"        id="btn-elf"   onclick="selectType('elf')"  >🧝 エルフ HP:20 ATK:8</button>
+      <button class="spawn-btn"        id="btn-dwarf" onclick="selectType('dwarf')">⛏ ドワーフHP:50 ATK:4</button>
     </div>
 
     <div class="panel">
@@ -154,9 +154,12 @@ const GRID         = 51;
 const CELL         = 14;
 const CANVAS_SIZE  = GRID * CELL;   // 714px (1.2x)
 
-const SPAWN_INTERVAL = 8;    // seconds: AI crystal → new unit
 const PATH_REFRESH   = 3.0;  // seconds between path recalculation
 const LOOP_COUNT     = 50;   // extra passages added to maze
+const SPD_COMMON     = 1.0;  // 全種族共通移動速度（マス/秒）
+
+// AI種族別スポーン間隔（秒）
+const AI_SPAWN = { goblin: 8, lizard: 10, ogre: 14 };
 
 const FACTIONS = {
   human:   { name: '人間族',    color: '#4488ff', zone: [0, 12, 0,  12] },
@@ -167,15 +170,30 @@ const FACTIONS = {
 };
 
 const UNIT_DEFS = {
-  human:  { emoji: '👤', hp: 30, atk: 5,  spd: 0.8,  faction: 'human'  },
-  elf:    { emoji: '🧝', hp: 20, atk: 8,  spd: 1.2,  faction: 'human'  },
-  dwarf:  { emoji: '⛏',  hp: 50, atk: 4,  spd: 0.5,  faction: 'human'  },
-  goblin: { emoji: '👺', hp: 15, atk: 4,  spd: 1.0,  faction: 'goblin' },
-  lizard: { emoji: '🦎', hp: 25, atk: 6,  spd: 0.8,  faction: 'lizard' },
-  ogre:   { emoji: '👹', hp: 60, atk: 8,  spd: 0.5,  faction: 'ogre'   },
+  human:  { emoji: '👤', hp: 30, atk: 5,  spd: SPD_COMMON, faction: 'human'  },
+  elf:    { emoji: '🧝', hp: 20, atk: 8,  spd: SPD_COMMON, faction: 'human'  },
+  dwarf:  { emoji: '⛏',  hp: 50, atk: 4,  spd: SPD_COMMON, faction: 'human'  },
+  goblin: { emoji: '👺', hp: 15, atk: 4,  spd: SPD_COMMON, faction: 'goblin' },
+  lizard: { emoji: '🦎', hp: 25, atk: 6,  spd: SPD_COMMON, faction: 'lizard' },
+  ogre:   { emoji: '👹', hp: 60, atk: 8,  spd: SPD_COMMON, faction: 'ogre'   },
 };
 
 const AI_UNIT = { goblin: 'goblin', lizard: 'lizard', ogre: 'ogre' };
+
+// 不利な組み合わせのみ記載（ATK × 0.7）。記載のないペアはすべて × 1.0
+// 出典: GAME_DESIGN.md「6種族の相性システム」
+const AFFINITY_DEBUFF = new Set([
+  'human-goblin',   // ゴブリンの数の暴力に対応しきれない
+  'elf-lizard',     // 鱗が矢を弾く
+  'dwarf-ogre',     // 怪力が鎧ごと吹き飛ばす
+  'goblin-ogre',    // 三すくみ：オーガ > ゴブリン
+  'lizard-goblin',  // 三すくみ：ゴブリン > リザード
+  'ogre-lizard',    // 三すくみ：リザード > オーガ
+]);
+
+function getAffinityMult(attackerType, defenderType) {
+  return AFFINITY_DEBUFF.has(`${attackerType}-${defenderType}`) ? 0.7 : 1.0;
+}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // STATE
@@ -329,8 +347,9 @@ function updateCrystals(dt) {
     // Human crystals spawn manually; neutral crystals don't spawn at all
     if (cr.owner === 'neutral' || cr.owner === 'human') continue;
     cr.spawnTimer += dt;
-    if (cr.spawnTimer >= SPAWN_INTERVAL) {
-      cr.spawnTimer -= SPAWN_INTERVAL;
+    const spawnInterval = AI_SPAWN[cr.owner];
+    if (cr.spawnTimer >= spawnInterval) {
+      cr.spawnTimer -= spawnInterval;
       trySpawnFromCrystal(cr);
     }
   }
@@ -388,9 +407,9 @@ function updateUnits(dt) {
     const enemies = cellGroup.filter(e => e.faction !== u.faction && e.hp > 0);
     if (enemies.length > 0) {
       u.inCombat = true;
-      // Attack one random enemy
+      // Attack one random enemy (with affinity correction)
       const target = enemies[Math.floor(Math.random() * enemies.length)];
-      target.hp -= u.atk * dt;
+      target.hp -= u.atk * getAffinityMult(u.type, target.type) * dt;
       continue;
     }
     u.inCombat = false;

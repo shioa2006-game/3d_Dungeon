@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dungeon Prototype</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0d0d0d;
+  color: #ddd;
+  font-family: 'Courier New', monospace;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+}
+h1 {
+  font-size: 15px;
+  color: #88aaff;
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+}
+#game { display: flex; gap: 10px; align-items: flex-start; }
+canvas {
+  border: 2px solid #444;
+  cursor: crosshair;
+  display: block;
+}
+#sidebar {
+  width: 230px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.panel {
+  background: #161624;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+.panel-title {
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #2a2a2a;
+  padding-bottom: 4px;
+}
+.spawn-btn {
+  display: block;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 6px 8px;
+  background: #111;
+  border: 1px solid #334;
+  color: #99aabb;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 11px;
+  text-align: left;
+  font-family: 'Courier New', monospace;
+}
+.spawn-btn:hover { background: #1a2a40; border-color: #4488ff; }
+.spawn-btn.active { background: #0a2040; border-color: #4488ff; color: #aaddff; }
+.faction-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+.dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+  flex-shrink: 0;
+}
+#time-display {
+  text-align: center;
+  font-size: 15px;
+  color: #aac;
+  font-weight: bold;
+}
+#log-area {
+  font-size: 10px;
+  color: #666;
+  max-height: 140px;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+#log-area p { border-bottom: 1px solid #1a1a1a; padding-bottom: 2px; margin-bottom: 2px; }
+.hint { font-size: 10px; color: #555; margin-bottom: 5px; line-height: 1.5; }
+.legend-row {
+  display: flex; align-items: center;
+  gap: 6px; font-size: 10px; color: #666; margin-bottom: 3px;
+}
+</style>
+</head>
+<body>
+<h1>🏰 DUNGEON PROTOTYPE — 2D</h1>
+<div id="game">
+  <canvas id="canvas"></canvas>
+  <div id="sidebar">
+
+    <div class="panel">
+      <div id="time-display">00:00</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">⚔️ スポーン</div>
+      <div class="hint">青いクリスタル 💎 をクリック</div>
+      <button class="spawn-btn active" id="btn-human" onclick="selectType('human')">👤 人間   HP:30 ATK:5  SPD:普</button>
+      <button class="spawn-btn"        id="btn-elf"   onclick="selectType('elf')"  >🧝 エルフ HP:20 ATK:8  SPD:速</button>
+      <button class="spawn-btn"        id="btn-dwarf" onclick="selectType('dwarf')">⛏ ドワーフHP:50 ATK:4  SPD:遅</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">📊 勢力情報</div>
+      <div id="faction-display"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">🗺️ 凡例</div>
+      <div class="legend-row"><span style="color:#4488ff">●</span> 人間族クリスタル（クリックでスポーン）</div>
+      <div class="legend-row"><span style="color:#44cc44">●</span> ゴブリン族クリスタル</div>
+      <div class="legend-row"><span style="color:#ff8844">●</span> リザード族クリスタル</div>
+      <div class="legend-row"><span style="color:#cc44cc">●</span> オーガ族クリスタル</div>
+      <div class="legend-row"><span style="color:#666">●</span> 中立クリスタル</div>
+      <div class="legend-row">🔴 戦闘中のマス</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">📋 イベントログ</div>
+      <div id="log-area"></div>
+    </div>
+
+    <div class="panel">
+      <button class="spawn-btn" onclick="restartGame()" style="text-align:center;color:#f88;">🔄 リスタート</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CONSTANTS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const GRID         = 51;
+const CELL         = 12;
+const CANVAS_SIZE  = GRID * CELL;   // 612px
+
+const SPAWN_INTERVAL = 8;    // seconds: AI crystal → new unit
+const MAX_UNITS      = 22;   // per faction max
+const PATH_REFRESH   = 3.0;  // seconds between path recalculation
+const LOOP_COUNT     = 50;   // extra passages added to maze
+
+const FACTIONS = {
+  human:   { name: '人間族',    color: '#4488ff', zone: [0, 12, 0,  12] },
+  goblin:  { name: 'ゴブリン',  color: '#44cc44', zone: [0, 12, 38, 50] },
+  lizard:  { name: 'リザード',  color: '#ff8844', zone: [38, 50, 0, 12] },
+  ogre:    { name: 'オーガ',    color: '#cc44cc', zone: [38, 50, 38, 50] },
+  neutral: { name: '中立',      color: '#666666', zone: null },
+};
+
+const UNIT_DEFS = {
+  human:  { emoji: '👤', hp: 30, atk: 5,  spd: 0.8,  faction: 'human'  },
+  elf:    { emoji: '🧝', hp: 20, atk: 8,  spd: 1.2,  faction: 'human'  },
+  dwarf:  { emoji: '⛏',  hp: 50, atk: 4,  spd: 0.5,  faction: 'human'  },
+  goblin: { emoji: '👺', hp: 15, atk: 4,  spd: 1.0,  faction: 'goblin' },
+  lizard: { emoji: '🦎', hp: 25, atk: 6,  spd: 0.8,  faction: 'lizard' },
+  ogre:   { emoji: '👹', hp: 60, atk: 8,  spd: 0.5,  faction: 'ogre'   },
+};
+
+const AI_UNIT = { goblin: 'goblin', lizard: 'lizard', ogre: 'ogre' };
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STATE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let grid         = [];
+let crystals     = [];
+let units        = [];
+let selectedType = 'human';
+let gameTime     = 0;
+let lastTime     = 0;
+let logLines     = [];
+let mazeImg      = null;
+let rafId        = null;
+
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+canvas.width  = CANVAS_SIZE;
+canvas.height = CANVAS_SIZE;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MAZE GENERATION (iterative DFS)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function generateMaze(size) {
+  const g = Array.from({ length: size }, () => new Uint8Array(size).fill(1));
+  g[1][1] = 0;
+  const stack = [[1, 1]];
+
+  while (stack.length) {
+    const [r, c] = stack[stack.length - 1];
+    const dirs = [[-2,0],[2,0],[0,-2],[0,2]];
+    for (let i = 3; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
+    }
+    let moved = false;
+    for (const [dr, dc] of dirs) {
+      const nr = r + dr, nc = c + dc;
+      if (nr > 0 && nr < size - 1 && nc > 0 && nc < size - 1 && g[nr][nc] === 1) {
+        g[r + dr / 2][c + dc / 2] = 0;
+        g[nr][nc] = 0;
+        stack.push([nr, nc]);
+        moved = true;
+        break;
+      }
+    }
+    if (!moved) stack.pop();
+  }
+
+  // Add loops for non-linear paths
+  let added = 0;
+  for (let attempt = 0; added < LOOP_COUNT && attempt < 2000; attempt++) {
+    const r = 1 + Math.floor(Math.random() * (size - 2));
+    const c = 1 + Math.floor(Math.random() * (size - 2));
+    if (g[r][c] !== 1) continue;
+    const vert  = r > 0 && r < size - 1 && g[r-1][c] === 0 && g[r+1][c] === 0;
+    const horiz = c > 0 && c < size - 1 && g[r][c-1] === 0 && g[r][c+1] === 0;
+    if (vert || horiz) { g[r][c] = 0; added++; }
+  }
+  return g;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// BFS PATHFINDING
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function bfs(sr, sc, gr, gc) {
+  if (!grid[gr] || grid[gr][gc] !== 0) return null;
+  if (sr === gr && sc === gc) return [[sr, sc]];
+
+  const key = (r, c) => r * GRID + c;
+  const prev = new Map([[key(sr, sc), -1]]);
+  const q = [[sr, sc]];
+
+  outer:
+  for (let i = 0; i < q.length; i++) {
+    const [r, c] = q[i];
+    for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const nr = r + dr, nc = c + dc;
+      if (nr < 0 || nr >= GRID || nc < 0 || nc >= GRID || grid[nr][nc] !== 0) continue;
+      const k = key(nr, nc);
+      if (prev.has(k)) continue;
+      prev.set(k, key(r, c));
+      if (nr === gr && nc === gc) break outer;
+      q.push([nr, nc]);
+    }
+  }
+
+  const gk = key(gr, gc);
+  if (!prev.has(gk)) return null;
+
+  const path = [];
+  let k = gk;
+  while (k !== -1) {
+    path.unshift([Math.floor(k / GRID), k % GRID]);
+    k = prev.get(k);
+  }
+  return path;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CRYSTALS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function openCells(r1, r2, c1, c2) {
+  const out = [];
+  for (let r = r1; r <= r2; r++)
+    for (let c = c1; c <= c2; c++)
+      if (grid[r]?.[c] === 0) out.push([r, c]);
+  return out;
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function initCrystals() {
+  crystals = [];
+  const E = GRID - 2;  // 49
+  const Z = 11;        // corner zone size
+
+  // 3 pre-claimed crystals per faction corner
+  const cornerZones = [
+    { owner: 'human',  r1: 1,   r2: Z,   c1: 1,   c2: Z   },
+    { owner: 'goblin', r1: 1,   r2: Z,   c1: E-Z, c2: E   },
+    { owner: 'lizard', r1: E-Z, r2: E,   c1: 1,   c2: Z   },
+    { owner: 'ogre',   r1: E-Z, r2: E,   c1: E-Z, c2: E   },
+  ];
+
+  for (const z of cornerZones) {
+    const cells = shuffle(openCells(z.r1, z.r2, z.c1, z.c2)).slice(0, 3);
+    for (const [r, c] of cells) {
+      crystals.push({
+        r, c,
+        owner: z.owner,
+        spawnTimer: Math.random() * SPAWN_INTERVAL,
+      });
+    }
+  }
+
+  // 16 neutral crystals in middle zone
+  const midCells = shuffle(openCells(Z + 2, E - Z - 2, Z + 2, E - Z - 2)).slice(0, 16);
+  for (const [r, c] of midCells) {
+    crystals.push({ r, c, owner: 'neutral', spawnTimer: 0 });
+  }
+}
+
+function updateCrystals(dt) {
+  for (const cr of crystals) {
+    // Human crystals spawn manually; neutral crystals don't spawn at all
+    if (cr.owner === 'neutral' || cr.owner === 'human') continue;
+    cr.spawnTimer += dt;
+    if (cr.spawnTimer >= SPAWN_INTERVAL) {
+      cr.spawnTimer -= SPAWN_INTERVAL;
+      trySpawnFromCrystal(cr);
+    }
+  }
+}
+
+function trySpawnFromCrystal(cr) {
+  const count = units.filter(u => u.faction === cr.owner).length;
+  if (count >= MAX_UNITS) return;
+  const type = AI_UNIT[cr.owner];
+  if (type) units.push(makeUnit(type, cr.r, cr.c));
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// UNITS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function makeUnit(type, r, c) {
+  const d = UNIT_DEFS[type];
+  return {
+    type, r, c,
+    emoji:     d.emoji,
+    faction:   d.faction,
+    hp:        d.hp,
+    maxHp:     d.hp,
+    atk:       d.atk,
+    spd:       d.spd,
+    path:      null,
+    pathTimer: Math.random() * 2,  // stagger initial BFS calls
+    moveTimer: 0,
+    inCombat:  false,
+  };
+}
+
+function bestTarget(unit) {
+  let best = null, bestDist = Infinity;
+  for (const cr of crystals) {
+    if (cr.owner === unit.faction) continue;
+    const d = Math.abs(cr.r - unit.r) + Math.abs(cr.c - unit.c);
+    if (d < bestDist) { bestDist = d; best = cr; }
+  }
+  return best;
+}
+
+function updateUnits(dt) {
+  // Build cell→units lookup for fast combat checks
+  const cellMap = new Map();
+  for (const u of units) {
+    const k = u.r * GRID + u.c;
+    if (!cellMap.has(k)) cellMap.set(k, []);
+    cellMap.get(k).push(u);
+  }
+
+  for (const u of units) {
+    if (u.hp <= 0) continue;
+
+    // ── Combat: attack enemies on same cell ──
+    const cellGroup = cellMap.get(u.r * GRID + u.c) || [];
+    const enemies = cellGroup.filter(e => e.faction !== u.faction && e.hp > 0);
+    if (enemies.length > 0) {
+      u.inCombat = true;
+      // Attack one random enemy
+      const target = enemies[Math.floor(Math.random() * enemies.length)];
+      target.hp -= u.atk * dt;
+      continue;
+    }
+    u.inCombat = false;
+
+    // ── Crystal claim ──
+    const cr = crystals.find(x => x.r === u.r && x.c === u.c && x.owner !== u.faction);
+    if (cr) {
+      const prev = cr.owner;
+      cr.owner = u.faction;
+      cr.spawnTimer = 0;
+      const prevName = FACTIONS[prev]?.name ?? '中立';
+      logEvent(`${FACTIONS[u.faction].name} がクリスタルを占領 (${prevName} → ${FACTIONS[u.faction].name})`);
+      u.path = null;
+      u.pathTimer = 0;  // find next target immediately
+    }
+
+    // ── Pathfinding refresh ──
+    u.pathTimer -= dt;
+    if (u.pathTimer <= 0) {
+      u.pathTimer = PATH_REFRESH;
+      const target = bestTarget(u);
+      u.path = target ? bfs(u.r, u.c, target.r, target.c) : null;
+    }
+
+    // ── Movement ──
+    u.moveTimer -= dt;
+    if (u.moveTimer <= 0) {
+      u.moveTimer = 1 / u.spd;
+      if (u.path && u.path.length > 1) {
+        u.path.shift();
+        u.r = u.path[0][0];
+        u.c = u.path[0][1];
+      } else {
+        u.path = null;
+        u.pathTimer = 0;
+      }
+    }
+  }
+
+  // Remove dead units
+  units = units.filter(u => u.hp > 0);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PLAYER INPUT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function selectType(type) {
+  selectedType = type;
+  document.querySelectorAll('.spawn-btn[id^="btn-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + type)?.classList.add('active');
+}
+
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width  / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const px = (e.clientX - rect.left) * scaleX;
+  const py = (e.clientY - rect.top)  * scaleY;
+  const cc = Math.floor(px / CELL);
+  const cr = Math.floor(py / CELL);
+
+  const crystal = crystals.find(x => x.r === cr && x.c === cc && x.owner === 'human');
+  if (!crystal) return;
+
+  const humanCount = units.filter(u => u.faction === 'human').length;
+  if (humanCount >= MAX_UNITS) {
+    logEvent('⚠️ 人間族のユニット上限 (' + MAX_UNITS + ')');
+    return;
+  }
+  units.push(makeUnit(selectedType, cr, cc));
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// RENDERING
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildMazeImage() {
+  const oc = document.createElement('canvas');
+  oc.width = CANVAS_SIZE;
+  oc.height = CANVAS_SIZE;
+  const mc = oc.getContext('2d');
+
+  // Faction zone tint (subtle background color per corner)
+  for (const [, fdata] of Object.entries(FACTIONS)) {
+    if (!fdata.zone) continue;
+    const [r1, r2, c1, c2] = fdata.zone;
+    mc.fillStyle = fdata.color + '14';
+    mc.fillRect(c1 * CELL, r1 * CELL, (c2 - c1 + 1) * CELL, (r2 - r1 + 1) * CELL);
+  }
+
+  // Draw cells
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < GRID; c++) {
+      mc.fillStyle = grid[r][c] === 1 ? '#141414' : '#303040';
+      mc.fillRect(c * CELL, r * CELL, CELL, CELL);
+    }
+  }
+
+  mazeImg = oc;
+}
+
+function render() {
+  ctx.drawImage(mazeImg, 0, 0);
+
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+
+  // ── Draw crystals ──
+  for (const cr of crystals) {
+    const x = cr.c * CELL + CELL / 2;
+    const y = cr.r * CELL + CELL / 2;
+    const color = FACTIONS[cr.owner].color;
+
+    ctx.beginPath();
+    ctx.arc(x, y, CELL / 2 - 0.5, 0, Math.PI * 2);
+    ctx.fillStyle   = cr.owner === 'neutral' ? '#252530' : color + '33';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+
+    ctx.font      = '8px sans-serif';
+    ctx.fillStyle = cr.owner === 'neutral' ? '#555' : '#ddd';
+    ctx.fillText('💎', x, y);
+  }
+
+  // ── Draw units (grouped per cell) ──
+  const cellMap = new Map();
+  for (const u of units) {
+    const k = u.r * GRID + u.c;
+    if (!cellMap.has(k)) cellMap.set(k, []);
+    cellMap.get(k).push(u);
+  }
+
+  for (const [k, group] of cellMap) {
+    const r = Math.floor(k / GRID);
+    const c = k % GRID;
+    const x = c * CELL + CELL / 2;
+    const y = r * CELL + CELL / 2;
+
+    // Combat flash
+    const hasCombat = group.some(u => u.inCombat);
+    if (hasCombat) {
+      ctx.fillStyle = 'rgba(255, 60, 0, 0.45)';
+      ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+    }
+
+    const u0 = group[0];
+
+    // HP bar (2px high, top of cell)
+    const hp = u0.hp / u0.maxHp;
+    ctx.fillStyle = '#111';
+    ctx.fillRect(c * CELL, r * CELL, CELL, 2);
+    ctx.fillStyle = hp > 0.5 ? '#4f4' : hp > 0.25 ? '#ff4' : '#f44';
+    ctx.fillRect(c * CELL, r * CELL, CELL * hp, 2);
+
+    // Emoji
+    ctx.font = '9px sans-serif';
+    ctx.fillText(u0.emoji, x, y + 1);
+
+    // Count badge when multiple units
+    if (group.length > 1) {
+      ctx.font      = 'bold 7px monospace';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(group.length, x + 4, y + 4);
+    }
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SIDEBAR
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function updateSidebar() {
+  const mm = String(Math.floor(gameTime / 60)).padStart(2, '0');
+  const ss = String(Math.floor(gameTime % 60)).padStart(2, '0');
+  document.getElementById('time-display').textContent = `⏱ ${mm}:${ss}`;
+
+  const crystalCount = {}, unitCount = {};
+  for (const f of ['human','goblin','lizard','ogre']) {
+    crystalCount[f] = 0; unitCount[f] = 0;
+  }
+  for (const cr of crystals) if (cr.owner in crystalCount) crystalCount[cr.owner]++;
+  for (const u  of units)    if (u.faction in unitCount)   unitCount[u.faction]++;
+
+  const html = ['human','goblin','lizard','ogre'].map(f => {
+    const d = FACTIONS[f];
+    return `<div class="faction-row">
+      <span><span class="dot" style="background:${d.color}"></span>${d.name}</span>
+      <span style="color:${d.color}">💎${crystalCount[f]}　⚔️${unitCount[f]}/${MAX_UNITS}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('faction-display').innerHTML = html;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// EVENT LOG
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function logEvent(msg) {
+  const mm = String(Math.floor(gameTime / 60)).padStart(2, '0');
+  const ss = String(Math.floor(gameTime % 60)).padStart(2, '0');
+  logLines.unshift(`[${mm}:${ss}] ${msg}`);
+  if (logLines.length > 30) logLines.pop();
+  document.getElementById('log-area').innerHTML =
+    logLines.slice(0, 15).map(l => `<p>${l}</p>`).join('');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GAME LOOP
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function loop(ts) {
+  const dt = Math.min((ts - lastTime) / 1000, 0.1);
+  lastTime = ts;
+  gameTime += dt;
+
+  updateUnits(dt);
+  updateCrystals(dt);
+  render();
+  updateSidebar();
+
+  rafId = requestAnimationFrame(loop);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// INIT / RESTART
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function restartGame() {
+  if (rafId) cancelAnimationFrame(rafId);
+  selectedType = 'human';
+  gameTime     = 0;
+  logLines     = [];
+  document.getElementById('log-area').innerHTML = '';
+  document.querySelectorAll('.spawn-btn[id^="btn-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-human')?.classList.add('active');
+
+  grid     = generateMaze(GRID);
+  units    = [];
+  initCrystals();
+  buildMazeImage();
+
+  logEvent('🏰 ゲーム開始！青い 💎 をクリックしてユニットをスポーン');
+
+  requestAnimationFrame(ts => {
+    lastTime = ts;
+    rafId = requestAnimationFrame(loop);
+  });
+}
+
+restartGame();
+</script>
+</body>
+</html>

@@ -84,7 +84,10 @@ canvas {
   font-size: 15px;
   color: #aac;
   font-weight: bold;
+  cursor: pointer;
+  user-select: none;
 }
+#time-display:hover { color: #eef; }
 #log-area {
   font-size: 10px;
   color: #666;
@@ -107,15 +110,15 @@ canvas {
   <div id="sidebar">
 
     <div class="panel">
-      <div id="time-display">00:00</div>
+      <div id="time-display" onclick="handleTimeClick()">▶ START</div>
     </div>
 
     <div class="panel">
-      <div class="panel-title">⚔️ スポーン</div>
-      <div class="hint">青いクリスタル 💎 をクリック</div>
-      <button class="spawn-btn active" id="btn-human" onclick="selectType('human')">👤 人間   HP:30 ATK:5</button>
-      <button class="spawn-btn"        id="btn-elf"   onclick="selectType('elf')"  >🧝 エルフ HP:20 ATK:8</button>
-      <button class="spawn-btn"        id="btn-dwarf" onclick="selectType('dwarf')">⛏ ドワーフHP:50 ATK:4</button>
+      <div class="panel-title">⚔️ 自動スポーン</div>
+      <div class="hint">▶ 次にスポーンされる種族</div>
+      <button class="spawn-btn active" id="btn-human" onclick="selectType('human')">🗡 人間   HP:30 ATK:5</button>
+      <button class="spawn-btn"        id="btn-elf"   onclick="selectType('elf')"  >🏹 エルフ HP:20 ATK:6</button>
+      <button class="spawn-btn"        id="btn-dwarf" onclick="selectType('dwarf')">⛏ ドワーフHP:35 ATK:6</button>
     </div>
 
     <div class="panel">
@@ -125,7 +128,7 @@ canvas {
 
     <div class="panel">
       <div class="panel-title">🗺️ 凡例</div>
-      <div class="legend-row"><span style="color:#4488ff">●</span> 人間族クリスタル（クリックでスポーン）</div>
+      <div class="legend-row"><span style="color:#4488ff">●</span> 人間族クリスタル（自動スポーン）</div>
       <div class="legend-row"><span style="color:#44cc44">●</span> ゴブリン族クリスタル</div>
       <div class="legend-row"><span style="color:#ff8844">●</span> リザード族クリスタル</div>
       <div class="legend-row"><span style="color:#cc44cc">●</span> オーガ族クリスタル</div>
@@ -134,13 +137,8 @@ canvas {
     </div>
 
     <div class="panel">
-      <div class="panel-title">📋 イベントログ</div>
-      <div id="log-area"></div>
-      <button class="spawn-btn" onclick="exportLog()" style="margin-top:6px;text-align:center;color:#8bf;">📤 ログをコピー</button>
-    </div>
-
-    <div class="panel">
-      <button class="spawn-btn" onclick="restartGame()" style="text-align:center;color:#f88;">🔄 リスタート</button>
+      <button class="spawn-btn" onclick="downloadAndClearLog()" style="text-align:center;color:#8bf;">📥 ログをDL &amp; クリア</button>
+      <button class="spawn-btn" onclick="restartGame()" style="text-align:center;color:#f88;margin-top:4px;">🔄 リスタート</button>
     </div>
 
   </div>
@@ -159,7 +157,13 @@ const LOOP_COUNT     = 50;   // extra passages added to maze
 const SPD_COMMON     = 1.0;  // 全種族共通移動速度（マス/秒）
 
 // AI種族別スポーン間隔（秒）
-const AI_SPAWN = { goblin: 14, lizard: 20, ogre: 26 };
+const AI_SPAWN = { goblin: 10, lizard: 12, ogre: 18 };
+
+// 人間側クリスタル1つあたりのスポーンクールダウン（秒）
+const HUMAN_SPAWN_COOLDOWN = 10;
+
+// 勢力ユニット上限 = 所有クリスタル数 × この係数
+const UNIT_CAP_PER_CRYSTAL = 5;
 
 const FACTIONS = {
   human:   { name: '人間族',    color: '#4488ff', zone: [0, 12, 0,  12] },
@@ -170,12 +174,12 @@ const FACTIONS = {
 };
 
 const UNIT_DEFS = {
-  human:  { emoji: '👤', hp: 30, atk: 5,  spd: SPD_COMMON, faction: 'human'  },
-  elf:    { emoji: '🧝', hp: 20, atk: 8,  spd: SPD_COMMON, faction: 'human'  },
-  dwarf:  { emoji: '⛏',  hp: 50, atk: 4,  spd: SPD_COMMON, faction: 'human'  },
-  goblin: { emoji: '👺', hp: 15, atk: 4,  spd: SPD_COMMON, faction: 'goblin' },
-  lizard: { emoji: '🦎', hp: 25, atk: 6,  spd: SPD_COMMON, faction: 'lizard' },
-  ogre:   { emoji: '👹', hp: 60, atk: 8,  spd: SPD_COMMON, faction: 'ogre'   },
+  human:  { emoji: '🗡', hp: 30, atk: 5,  spd: SPD_COMMON, faction: 'human'  },
+  elf:    { emoji: '🏹', hp: 25, atk: 6,  spd: SPD_COMMON, faction: 'human'  },
+  dwarf:  { emoji: '⛏',  hp: 35, atk: 6,  spd: SPD_COMMON, faction: 'human'  },
+  goblin: { emoji: '👽', hp: 28, atk: 7,  spd: SPD_COMMON, faction: 'goblin' },
+  lizard: { emoji: '🦖', hp: 28, atk: 8,  spd: SPD_COMMON, faction: 'lizard' },
+  ogre:   { emoji: '👹', hp: 60, atk: 6,  spd: SPD_COMMON, faction: 'ogre'   },
 };
 
 const AI_UNIT = { goblin: 'goblin', lizard: 'lizard', ogre: 'ogre' };
@@ -204,9 +208,14 @@ let units        = [];
 let selectedType = 'human';
 let gameTime     = 0;
 let lastTime     = 0;
-let logLines     = [];
 let mazeImg      = null;
 let rafId        = null;
+let gameStarted  = false;
+let gameLog             = null;
+let humanAutoSpawnIndex = 0;  // 0=human 1=elf 2=dwarf のローテーション
+
+const LOG_STORAGE_KEY   = 'dungeon_prototype_log';
+const HUMAN_AUTO_TYPES  = ['human', 'elf', 'dwarf'];
 
 const canvas = document.getElementById('canvas');
 const ctx    = canvas.getContext('2d');
@@ -349,15 +358,30 @@ function initCrystals() {
       crystals.push({
         r, c,
         owner: z.owner,
-        spawnTimer: Math.random() * AI_SPAWN[z.owner],
+        spawnTimer:    Math.random() * AI_SPAWN[z.owner],
+        lastSpawnTime: -HUMAN_SPAWN_COOLDOWN, // 初回はすぐスポーン可能
       });
     }
   }
 
-  // 16 neutral crystals in middle zone
-  const midCells = shuffle(openCells(Z + 2, E - Z - 2, Z + 2, E - Z - 2)).slice(0, 16);
+  // 各拠点近傍に2個ずつ中立クリスタルを配置（初動格差の抑制）
+  const nearFactionZones = [
+    { r1: 1,      r2: Z+6,  c1: Z+1,   c2: Z+6  }, // 人間拠点近傍
+    { r1: 1,      r2: Z+6,  c1: E-Z-6, c2: E-1  }, // ゴブリン拠点近傍
+    { r1: E-Z-6,  r2: E-1,  c1: Z+1,   c2: Z+6  }, // リザード拠点近傍
+    { r1: E-Z-6,  r2: E-1,  c1: E-Z-6, c2: E-1  }, // オーガ拠点近傍
+  ];
+  for (const z of nearFactionZones) {
+    const cells = shuffle(openCells(z.r1, z.r2, z.c1, z.c2)).slice(0, 2);
+    for (const [r, c] of cells) {
+      crystals.push({ r, c, owner: 'neutral', spawnTimer: 0, lastSpawnTime: -HUMAN_SPAWN_COOLDOWN });
+    }
+  }
+
+  // 中央に8個の中立クリスタル
+  const midCells = shuffle(openCells(Z + 2, E - Z - 2, Z + 2, E - Z - 2)).slice(0, 8);
   for (const [r, c] of midCells) {
-    crystals.push({ r, c, owner: 'neutral', spawnTimer: 0 });
+    crystals.push({ r, c, owner: 'neutral', spawnTimer: 0, lastSpawnTime: -HUMAN_SPAWN_COOLDOWN });
   }
 }
 
@@ -376,7 +400,15 @@ function updateCrystals(dt) {
 
 function trySpawnFromCrystal(cr) {
   const type = AI_UNIT[cr.owner];
-  if (type) units.push(makeUnit(type, cr.r, cr.c));
+  if (!type) return;
+
+  // 勢力ユニット上限チェック（所有クリスタル数 × UNIT_CAP_PER_CRYSTAL）
+  const cap       = crystals.filter(c => c.owner === cr.owner).length * UNIT_CAP_PER_CRYSTAL;
+  const current   = units.filter(u => u.faction === cr.owner).length;
+  if (current >= cap) return;
+
+  units.push(makeUnit(type, cr.r, cr.c));
+  recordSpawn(type);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -385,10 +417,10 @@ function trySpawnFromCrystal(cr) {
 function makeUnit(type, r, c) {
   const d = UNIT_DEFS[type];
   const faction = d.faction;
-  // AI勢力はスポーン時にランダムなターゲットを割り当て、プレイヤー勢力はnull
-  const isAI = faction !== 'human';
-  const targetCrystal = isAI
-    ? (crystals.filter(cr => cr.owner !== faction)[Math.floor(Math.random() * crystals.filter(cr => cr.owner !== faction).length)] ?? null)
+  // 全勢力共通：スポーン時にランダムなターゲットを割り当て
+  const candidates = crystals.filter(cr => cr.owner !== faction);
+  const targetCrystal = candidates.length > 0
+    ? candidates[Math.floor(Math.random() * candidates.length)]
     : null;
   return {
     type, r, c,
@@ -402,9 +434,23 @@ function makeUnit(type, r, c) {
     pathTimer:     Math.random() * 2,  // stagger initial BFS calls
     moveTimer:     0,
     inCombat:      false,
-    targetCrystal, // 現在の目標クリスタル（AI勢力のみ使用）
-    retargetTimer: newRetargetInterval(), // 次の再評価までの残り秒数
+    targetCrystal, // 現在の目標クリスタル（全勢力共通）
+    retreating:    false,  // 回復のため自軍クリスタルへ退却中
+    healing:       false,  // クリスタルで回復待機中
+    retreatTarget: null,   // 退却先クリスタル
+    spawnTime:     gameTime,
+    lastAttacker:  null,
   };
+}
+
+function nearestFriendlyCrystal(unit) {
+  let best = null, bestDist = Infinity;
+  for (const cr of crystals) {
+    if (cr.owner !== unit.faction) continue;
+    const d = Math.abs(cr.r - unit.r) + Math.abs(cr.c - unit.c);
+    if (d < bestDist) { bestDist = d; best = cr; }
+  }
+  return best;
 }
 
 function bestTarget(unit) {
@@ -417,11 +463,21 @@ function bestTarget(unit) {
   return best;
 }
 
-// 自勢力以外のクリスタルをランダムに1つ返す（なければ null）
+// 自勢力以外のクリスタルを距離反比例の重みでランダムに1つ返す（近いほど選ばれやすい）
 function randomTarget(unit) {
   const candidates = crystals.filter(cr => cr.owner !== unit.faction);
   if (candidates.length === 0) return null;
-  return candidates[Math.floor(Math.random() * candidates.length)];
+  const weights = candidates.map(cr => {
+    const d = Math.abs(cr.r - unit.r) + Math.abs(cr.c - unit.c);
+    return 1 / (d + 1);
+  });
+  const total = weights.reduce((a, b) => a + b, 0);
+  let rand = Math.random() * total;
+  for (let i = 0; i < candidates.length; i++) {
+    rand -= weights[i];
+    if (rand <= 0) return candidates[i];
+  }
+  return candidates[candidates.length - 1];
 }
 
 // 再評価タイマーの初期値（10〜20秒のランダム）
@@ -446,57 +502,105 @@ function updateUnits(dt) {
     const enemies = cellGroup.filter(e => e.faction !== u.faction && e.hp > 0);
     if (enemies.length > 0) {
       u.inCombat = true;
-      // Attack one random enemy (with affinity correction)
+      u.healing = false; // 戦闘で回復を中断
       const target = enemies[Math.floor(Math.random() * enemies.length)];
       target.hp -= u.atk * getAffinityMult(u.type, target.type) * dt;
+      target.lastAttacker = u.type;
       continue;
     }
     u.inCombat = false;
 
-    // ── Crystal claim ──
-    const cr = crystals.find(x => x.r === u.r && x.c === u.c && x.owner !== u.faction);
-    if (cr) {
-      const prev = cr.owner;
-      cr.owner = u.faction;
-      cr.spawnTimer = 0;
-      const prevName = FACTIONS[prev]?.name ?? '中立';
-      logEvent(`${FACTIONS[u.faction].name} がクリスタルを占領 (${prevName} → ${FACTIONS[u.faction].name})`);
-      u.path = null;
-      u.pathTimer = 0;
-      // 占領後は必ず別のターゲットに再割り当て
-      if (u.targetCrystal !== undefined) {
-        u.targetCrystal = randomTarget(u);
-        u.retargetTimer = newRetargetInterval();
+    // ── Healing at friendly crystal ──
+    if (u.healing) {
+      if (!u.retreatTarget || u.retreatTarget.owner !== u.faction) {
+        // 回復先が奪われた → 次の自軍クリスタルへ
+        const next = nearestFriendlyCrystal(u);
+        if (next) {
+          u.retreatTarget = next;
+          u.retreating = true;
+          u.healing = false;
+          u.path = null;
+          u.pathTimer = 0;
+        } else {
+          // 自軍クリスタルなし → 通常行動に戻る
+          u.healing = false;
+          u.retreatTarget = null;
+        }
+      } else {
+        // MaxHP / 8 per second で回復
+        u.hp = Math.min(u.maxHp, u.hp + (u.maxHp / 8) * dt);
+        if (u.hp >= u.maxHp) {
+          u.healing = false;
+          u.retreatTarget = null;
+          u.path = null;
+          u.pathTimer = 0;
+          if (gameLog) gameLog.unitStats[u.type].healedSuccessfully++;
+        }
+      }
+      continue; // 回復中は移動しない
+    }
+
+    // ── Retreat detection: HP が 1/3 以下なら最寄り自軍クリスタルへ退却 ──
+    if (!u.retreating && u.hp <= u.maxHp / 3) {
+      const cr = nearestFriendlyCrystal(u);
+      if (cr) {
+        u.retreatTarget = cr;
+        u.retreating = true;
+        u.path = null;
+        u.pathTimer = 0;
+        if (gameLog) gameLog.unitStats[u.type].retreats++;
       }
     }
 
-    // ── Retarget timer (AI勢力のみ) ──
-    if (u.targetCrystal !== undefined) {
-      u.retargetTimer -= dt;
-      if (u.retargetTimer <= 0) {
-        if (Math.random() < 0.5) {
-          // 50%: 別のクリスタルに変更
-          u.targetCrystal = randomTarget(u);
+    // ── Retreat: 到着確認 / 退却先消失チェック ──
+    if (u.retreating) {
+      if (!u.retreatTarget || u.retreatTarget.owner !== u.faction) {
+        // 退却先が奪われた → 次の自軍クリスタルへ切り替え
+        const next = nearestFriendlyCrystal(u);
+        if (next) {
+          u.retreatTarget = next;
           u.path = null;
           u.pathTimer = 0;
+        } else {
+          // 自軍クリスタルなし → 通常行動（敵クリスタルを目標）
+          u.retreating = false;
+          u.retreatTarget = null;
         }
-        // 50%: 現ターゲット維持（タイマーのみリセット）
-        u.retargetTimer = newRetargetInterval();
+      } else if (u.r === u.retreatTarget.r && u.c === u.retreatTarget.c) {
+        // 到着 → 回復開始
+        u.retreating = false;
+        u.healing = true;
+        u.path = null;
       }
-      // ターゲットが既に自勢力に変わっていたら即再割り当て
-      if (u.targetCrystal && u.targetCrystal.owner === u.faction) {
-        u.targetCrystal = randomTarget(u);
+    }
+
+    // ── Crystal claim (退却・回復中はスキップ) ──
+    if (!u.retreating && !u.healing) {
+      const cr = crystals.find(x => x.r === u.r && x.c === u.c && x.owner !== u.faction);
+      if (cr) {
+        cr.owner = u.faction;
+        cr.spawnTimer = 0;
         u.path = null;
         u.pathTimer = 0;
+        u.targetCrystal = randomTarget(u);
       }
+    }
+
+    // ── ターゲット検証（目標が自陣になったら再ターゲット・全勢力共通） ──
+    if (!u.retreating && u.targetCrystal && u.targetCrystal.owner === u.faction) {
+      u.targetCrystal = randomTarget(u);
+      u.path = null;
+      u.pathTimer = 0;
     }
 
     // ── Pathfinding refresh ──
     u.pathTimer -= dt;
     if (u.pathTimer <= 0) {
       u.pathTimer = PATH_REFRESH;
-      const target = u.targetCrystal ? u.targetCrystal : bestTarget(u);
-      u.path = target ? bfs(u.r, u.c, target.r, target.c) : null;
+      const navTarget = u.retreating
+        ? u.retreatTarget
+        : (u.targetCrystal ? u.targetCrystal : bestTarget(u));
+      u.path = navTarget ? bfs(u.r, u.c, navTarget.r, navTarget.c) : null;
     }
 
     // ── Movement ──
@@ -514,8 +618,36 @@ function updateUnits(dt) {
     }
   }
 
-  // Remove dead units
+  // Record deaths then remove dead units
+  for (const u of units) { if (u.hp <= 0) recordDeath(u); }
   units = units.filter(u => u.hp > 0);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// HUMAN AUTO SPAWN
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function updateHumanAutoSpawn() {
+  // 勢力ユニット上限チェック（AI勢力と同じ: 所有クリスタル数 × UNIT_CAP_PER_CRYSTAL）
+  const cap     = crystals.filter(c => c.owner === 'human').length * UNIT_CAP_PER_CRYSTAL;
+  const current = units.filter(u => u.faction === 'human').length;
+  if (current >= cap) return;
+
+  for (const cr of crystals) {
+    if (cr.owner !== 'human') continue;
+    if (gameTime - cr.lastSpawnTime < HUMAN_SPAWN_COOLDOWN) continue;
+    const type = HUMAN_AUTO_TYPES[humanAutoSpawnIndex % HUMAN_AUTO_TYPES.length];
+    cr.lastSpawnTime = gameTime;
+    units.push(makeUnit(type, cr.r, cr.c));
+    recordSpawn(type);
+    humanAutoSpawnIndex++;
+    updateSpawnIndicator();
+  }
+}
+
+function updateSpawnIndicator() {
+  const next = HUMAN_AUTO_TYPES[humanAutoSpawnIndex % HUMAN_AUTO_TYPES.length];
+  document.querySelectorAll('.spawn-btn[id^="btn-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + next)?.classList.add('active');
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -539,7 +671,12 @@ canvas.addEventListener('click', e => {
   const crystal = crystals.find(x => x.r === cr && x.c === cc && x.owner === 'human');
   if (!crystal) return;
 
+  // クールダウンチェック（クリスタル1つにつき5秒に1体）
+  if (gameTime - crystal.lastSpawnTime < HUMAN_SPAWN_COOLDOWN) return;
+  crystal.lastSpawnTime = gameTime;
+
   units.push(makeUnit(selectedType, cr, cc));
+  recordSpawn(selectedType);
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -593,6 +730,26 @@ function render() {
     ctx.font      = '10px sans-serif';
     ctx.fillStyle = cr.owner === 'neutral' ? '#555' : '#ddd';
     ctx.fillText('💎', x, y);
+
+    // 人間クリスタルのスポーンクールダウン表示
+    if (cr.owner === 'human' && gameStarted) {
+      const elapsed = gameTime - cr.lastSpawnTime;
+      if (elapsed < HUMAN_SPAWN_COOLDOWN) {
+        const ratio = elapsed / HUMAN_SPAWN_COOLDOWN;
+        // 暗いオーバーレイ
+        ctx.beginPath();
+        ctx.arc(x, y, CELL / 2 - 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fill();
+        // 残り時間を示す扇形（白い弧が減っていく）
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.arc(x, y, CELL / 2 - 0.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.fill();
+      }
+    }
   }
 
   // ── Draw units (grouped per cell) ──
@@ -642,9 +799,14 @@ function render() {
 // SIDEBAR
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function updateSidebar() {
-  const mm = String(Math.floor(gameTime / 60)).padStart(2, '0');
-  const ss = String(Math.floor(gameTime % 60)).padStart(2, '0');
-  document.getElementById('time-display').textContent = `⏱ ${mm}:${ss}`;
+  const el = document.getElementById('time-display');
+  if (gameStarted) {
+    const mm = String(Math.floor(gameTime / 60)).padStart(2, '0');
+    const ss = String(Math.floor(gameTime % 60)).padStart(2, '0');
+    el.textContent = `⏱ ${mm}:${ss}`;
+  } else {
+    el.textContent = '▶ START';
+  }
 
   const crystalCount = {}, unitCount = {};
   for (const f of ['human','goblin','lizard','ogre']) {
@@ -664,29 +826,104 @@ function updateSidebar() {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// EVENT LOG
+// LOG SYSTEM
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function logEvent(msg) {
-  const mm = String(Math.floor(gameTime / 60)).padStart(2, '0');
-  const ss = String(Math.floor(gameTime % 60)).padStart(2, '0');
-  logLines.unshift(`[${mm}:${ss}] ${msg}`);
-  if (logLines.length > 200) logLines.pop();
-  document.getElementById('log-area').innerHTML =
-    logLines.slice(0, 15).map(l => `<p>${l}</p>`).join('');
+function initGameLog() {
+  gameLog = {
+    sessionId:      new Date().toISOString(),
+    duration:       0,
+    unitStats:      {},  // type → { spawned, killed, killsMade, totalLifetime, retreats, healedSuccessfully, killedWhileRetreating }
+    matchups:       {},  // 'attacker_kills_defender' → N
+    timeline:       [],  // 30秒ごとのスナップショット
+    spawnByFaction: {},  // faction → 総スポーン数
+    nextSnapshotAt: 30,
+  };
+  for (const type of Object.keys(UNIT_DEFS)) {
+    gameLog.unitStats[type] = {
+      spawned: 0, killed: 0, killsMade: 0, totalLifetime: 0,
+      retreats: 0, healedSuccessfully: 0, killedWhileRetreating: 0,
+    };
+  }
+  for (const f of ['human','goblin','lizard','ogre']) {
+    gameLog.spawnByFaction[f] = 0;
+  }
 }
 
-function exportLog() {
-  const text = logLines.join('\n');
-  navigator.clipboard.writeText(text).then(() => {
-    logEvent('📋 ログをクリップボードにコピーしました (' + logLines.length + '件)');
-  }).catch(() => {
-    // fallback: download as text file
-    const blob = new Blob([text], { type: 'text/plain' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'dungeon_log.txt';
-    a.click();
-  });
+function recordSpawn(type) {
+  if (!gameLog) return;
+  gameLog.unitStats[type].spawned++;
+  const faction = UNIT_DEFS[type].faction;
+  gameLog.spawnByFaction[faction] = (gameLog.spawnByFaction[faction] || 0) + 1;
+}
+
+function recordDeath(unit) {
+  if (!gameLog) return;
+  const s = gameLog.unitStats[unit.type];
+  if (!s) return;
+  s.killed++;
+  s.totalLifetime += gameTime - (unit.spawnTime ?? gameTime);
+  if (unit.retreating || unit.healing) s.killedWhileRetreating++;
+  if (unit.lastAttacker) {
+    gameLog.unitStats[unit.lastAttacker].killsMade++;
+    const key = `${unit.lastAttacker}_kills_${unit.type}`;
+    gameLog.matchups[key] = (gameLog.matchups[key] || 0) + 1;
+  }
+}
+
+function takeSnapshot() {
+  if (!gameLog) return;
+  const cc = { human: 0, goblin: 0, lizard: 0, ogre: 0, neutral: 0 };
+  const uc = { human: 0, goblin: 0, lizard: 0, ogre: 0 };
+  for (const cr of crystals) if (cr.owner in cc) cc[cr.owner]++;
+  for (const u  of units)    if (u.faction in uc) uc[u.faction]++;
+  gameLog.timeline.push({ t: Math.round(gameTime), crystals: { ...cc }, units: { ...uc } });
+  gameLog.duration = gameTime;
+  // 30秒ごとに localStorage に保存（ページクラッシュ対策）
+  saveLogToStorage();
+}
+
+function saveLogToStorage() {
+  if (!gameLog) return;
+  gameLog.duration = gameTime;
+  // avgLifetime を計算してから保存
+  const out = JSON.parse(JSON.stringify(gameLog));
+  for (const [type, s] of Object.entries(out.unitStats)) {
+    s.avgLifetime = s.killed > 0 ? Math.round(s.totalLifetime / s.killed * 10) / 10 : null;
+  }
+  localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(out, null, 2));
+}
+
+function downloadAndClearLog() {
+  saveLogToStorage();
+  const data = localStorage.getItem(LOG_STORAGE_KEY);
+  if (!data) { alert('ログがありません。ゲームを開始してください。'); return; }
+  const ts   = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+  const blob = new Blob([data], { type: 'application/json' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `dungeon_log_${ts}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  clearLogCache();
+}
+
+function clearLogCache() {
+  localStorage.removeItem(LOG_STORAGE_KEY);
+  gameLog = null;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// START CONTROL
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function handleTimeClick() {
+  if (!gameStarted) {
+    gameStarted = true;
+    initGameLog();
+    requestAnimationFrame(ts => {
+      lastTime = ts;
+      rafId = requestAnimationFrame(loop);
+    });
+  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -697,6 +934,13 @@ function loop(ts) {
   lastTime = ts;
   gameTime += dt;
 
+  // 30秒ごとにスナップショット取得
+  if (gameLog && gameTime >= gameLog.nextSnapshotAt) {
+    takeSnapshot();
+    gameLog.nextSnapshotAt += 30;
+  }
+
+  updateHumanAutoSpawn();
   updateUnits(dt);
   updateCrystals(dt);
   render();
@@ -710,10 +954,12 @@ function loop(ts) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function restartGame() {
   if (rafId) cancelAnimationFrame(rafId);
-  selectedType = 'human';
-  gameTime     = 0;
-  logLines     = [];
-  document.getElementById('log-area').innerHTML = '';
+  clearLogCache();
+  selectedType        = 'human';
+  gameTime            = 0;
+  gameStarted         = false;
+  rafId               = null;
+  humanAutoSpawnIndex = 0;
   document.querySelectorAll('.spawn-btn[id^="btn-"]').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-human')?.classList.add('active');
 
@@ -721,13 +967,8 @@ function restartGame() {
   units    = [];
   initCrystals();
   buildMazeImage();
-
-  logEvent('🏰 ゲーム開始！青い 💎 をクリックしてユニットをスポーン');
-
-  requestAnimationFrame(ts => {
-    lastTime = ts;
-    rafId = requestAnimationFrame(loop);
-  });
+  render();
+  updateSidebar();
 }
 
 restartGame();

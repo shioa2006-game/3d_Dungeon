@@ -1,0 +1,180 @@
+{
+  "sessionId": "2026-04-12T14:00:15.042Z",
+  "duration": 150.86448600002004,
+  "unitStats": {
+    "human": {
+      "spawned": 47,
+      "killed": 25,
+      "killsMade": 16,
+      "totalLifetime": 1167.717300000189,
+      "retreats": 6,
+      "healedSuccessfully": 2,
+      "killedWhileRetreating": 1,
+      "avgLifetime": 46.7
+    },
+    "elf": {
+      "spawned": 47,
+      "killed": 25,
+      "killsMade": 10,
+      "totalLifetime": 899.6042000001393,
+      "retreats": 6,
+      "healedSuccessfully": 4,
+      "killedWhileRetreating": 0,
+      "avgLifetime": 36
+    },
+    "dwarf": {
+      "spawned": 46,
+      "killed": 23,
+      "killsMade": 32,
+      "totalLifetime": 862.7373000001454,
+      "retreats": 9,
+      "healedSuccessfully": 2,
+      "killedWhileRetreating": 2,
+      "avgLifetime": 37.5
+    },
+    "goblin": {
+      "spawned": 65,
+      "killed": 59,
+      "killsMade": 38,
+      "totalLifetime": 1969.355100000282,
+      "retreats": 16,
+      "healedSuccessfully": 6,
+      "killedWhileRetreating": 8,
+      "avgLifetime": 33.4
+    },
+    "lizard": {
+      "spawned": 60,
+      "killed": 28,
+      "killsMade": 35,
+      "totalLifetime": 1496.5128000002383,
+      "retreats": 16,
+      "healedSuccessfully": 8,
+      "killedWhileRetreating": 2,
+      "avgLifetime": 53.4
+    },
+    "ogre": {
+      "spawned": 31,
+      "killed": 14,
+      "killsMade": 43,
+      "totalLifetime": 796.5890000001199,
+      "retreats": 10,
+      "healedSuccessfully": 4,
+      "killedWhileRetreating": 3,
+      "avgLifetime": 56.9
+    }
+  },
+  "matchups": {
+    "goblin_kills_elf": 14,
+    "human_kills_goblin": 10,
+    "dwarf_kills_goblin": 21,
+    "ogre_kills_goblin": 20,
+    "lizard_kills_human": 9,
+    "lizard_kills_ogre": 8,
+    "goblin_kills_human": 7,
+    "goblin_kills_lizard": 4,
+    "ogre_kills_lizard": 7,
+    "elf_kills_goblin": 7,
+    "goblin_kills_dwarf": 10,
+    "lizard_kills_dwarf": 9,
+    "ogre_kills_human": 9,
+    "dwarf_kills_lizard": 11,
+    "human_kills_ogre": 2,
+    "elf_kills_ogre": 1,
+    "goblin_kills_ogre": 3,
+    "lizard_kills_elf": 8,
+    "ogre_kills_elf": 3,
+    "ogre_kills_dwarf": 4,
+    "elf_kills_lizard": 2,
+    "human_kills_lizard": 4,
+    "lizard_kills_goblin": 1
+  },
+  "timeline": [
+    {
+      "t": 30,
+      "crystals": {
+        "human": 5,
+        "goblin": 5,
+        "lizard": 5,
+        "ogre": 4,
+        "neutral": 9
+      },
+      "units": {
+        "human": 13,
+        "goblin": 11,
+        "lizard": 7,
+        "ogre": 5
+      }
+    },
+    {
+      "t": 60,
+      "crystals": {
+        "human": 5,
+        "goblin": 6,
+        "lizard": 5,
+        "ogre": 6,
+        "neutral": 6
+      },
+      "units": {
+        "human": 25,
+        "goblin": 23,
+        "lizard": 19,
+        "ogre": 12
+      }
+    },
+    {
+      "t": 90,
+      "crystals": {
+        "human": 12,
+        "goblin": 6,
+        "lizard": 5,
+        "ogre": 5,
+        "neutral": 0
+      },
+      "units": {
+        "human": 41,
+        "goblin": 18,
+        "lizard": 25,
+        "ogre": 21
+      }
+    },
+    {
+      "t": 120,
+      "crystals": {
+        "human": 11,
+        "goblin": 5,
+        "lizard": 9,
+        "ogre": 3,
+        "neutral": 0
+      },
+      "units": {
+        "human": 50,
+        "goblin": 16,
+        "lizard": 30,
+        "ogre": 19
+      }
+    },
+    {
+      "t": 150,
+      "crystals": {
+        "human": 14,
+        "goblin": 2,
+        "lizard": 8,
+        "ogre": 4,
+        "neutral": 0
+      },
+      "units": {
+        "human": 68,
+        "goblin": 6,
+        "lizard": 32,
+        "ogre": 17
+      }
+    }
+  ],
+  "spawnByFaction": {
+    "human": 140,
+    "goblin": 65,
+    "lizard": 60,
+    "ogre": 31
+  },
+  "nextSnapshotAt": 180
+}

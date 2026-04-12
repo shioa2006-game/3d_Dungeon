@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(move \"C:\\\\Users\\\\shioa\\\\Documents\\\\1_ProgramFiles\\\\3d_Dungeon\\\\dungeon_log_2026-04-12T09-47-03.json\" \"C:\\\\Users\\\\shioa\\\\Documents\\\\1_ProgramFiles\\\\3d_Dungeon\\\\logs\\\\\")",
+      "Bash(mkdir -p /mnt/c/Users/shioa/Documents/1_ProgramFiles/3d_Dungeon/logs)",
+      "Bash(mv /mnt/c/Users/shioa/Documents/1_ProgramFiles/3d_Dungeon/dungeon_log_2026-04-12T09-47-03.json /mnt/c/Users/shioa/Documents/1_ProgramFiles/3d_Dungeon/logs/)",
+      "Bash(powershell.exe -Command \"New-Item -ItemType Directory -Path 'C:\\\\Users\\\\shioa\\\\Documents\\\\1_ProgramFiles\\\\3d_Dungeon\\\\logs' -Force; Move-Item 'C:\\\\Users\\\\shioa\\\\Documents\\\\1_ProgramFiles\\\\3d_Dungeon\\\\dungeon_log_2026-04-12T09-47-03.json' 'C:\\\\Users\\\\shioa\\\\Documents\\\\1_ProgramFiles\\\\3d_Dungeon\\\\logs\\\\'\")"
     ]
   }
 }

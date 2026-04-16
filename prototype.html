@@ -101,6 +101,16 @@ canvas {
   display: flex; align-items: center;
   gap: 6px; font-size: 10px; color: #666; margin-bottom: 3px;
 }
+.sim-input {
+  width: 60px;
+  padding: 4px 6px;
+  background: #111;
+  border: 1px solid #334;
+  color: #ddd;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  border-radius: 3px;
+}
 </style>
 </head>
 <body>
@@ -141,6 +151,16 @@ canvas {
       <button class="spawn-btn" onclick="restartGame()" style="text-align:center;color:#f88;margin-top:4px;">🔄 リスタート</button>
     </div>
 
+    <div class="panel" id="sim-panel">
+      <div class="panel-title">🤖 一括シミュレーション</div>
+      <div style="display:flex;gap:4px;margin-bottom:4px;align-items:center;">
+        <input id="sim-count" type="number" value="10" min="1" max="1000" class="sim-input">
+        <span style="font-size:11px;color:#888">回</span>
+      </div>
+      <button class="spawn-btn" onclick="runBulkSimulation()" style="text-align:center;color:#af8;">▶▶ 実行 &amp; ログDL</button>
+      <div id="sim-progress" style="font-size:10px;color:#666;margin-top:4px;"></div>
+    </div>
+
   </div>
 </div>
 
@@ -157,7 +177,7 @@ const LOOP_COUNT     = 50;   // extra passages added to maze
 const SPD_COMMON     = 1.0;  // 全種族共通移動速度（マス/秒）
 
 // AI種族別スポーン間隔（秒）
-const AI_SPAWN = { goblin: 10, lizard: 12, ogre: 18 };
+const AI_SPAWN = { goblin: 14, lizard: 10, ogre: 18 };
 
 // 人間側クリスタル1つあたりのスポーンクールダウン（秒）
 const HUMAN_SPAWN_COOLDOWN = 10;
@@ -174,12 +194,12 @@ const FACTIONS = {
 };
 
 const UNIT_DEFS = {
-  human:  { emoji: '🗡', hp: 30, atk: 5,  spd: SPD_COMMON, faction: 'human'  },
+  human:  { emoji: '🗡', hp: 30, atk: 6,  spd: SPD_COMMON, faction: 'human'  },
   elf:    { emoji: '🏹', hp: 25, atk: 6,  spd: SPD_COMMON, faction: 'human'  },
   dwarf:  { emoji: '⛏',  hp: 35, atk: 6,  spd: SPD_COMMON, faction: 'human'  },
   goblin: { emoji: '👽', hp: 28, atk: 7,  spd: SPD_COMMON, faction: 'goblin' },
   lizard: { emoji: '🦖', hp: 28, atk: 8,  spd: SPD_COMMON, faction: 'lizard' },
-  ogre:   { emoji: '👹', hp: 60, atk: 6,  spd: SPD_COMMON, faction: 'ogre'   },
+  ogre:   { emoji: '👹', hp: 50, atk: 6,  spd: SPD_COMMON, faction: 'ogre'   },
 };
 
 const AI_UNIT = { goblin: 'goblin', lizard: 'lizard', ogre: 'ogre' };
@@ -187,7 +207,7 @@ const AI_UNIT = { goblin: 'goblin', lizard: 'lizard', ogre: 'ogre' };
 // 不利な組み合わせのみ記載（ATK × 0.7）。記載のないペアはすべて × 1.0
 // 出典: GAME_DESIGN.md「6種族の相性システム」
 const AFFINITY_DEBUFF = new Set([
-  'human-goblin',   // ゴブリンの数の暴力に対応しきれない
+  // 'human-goblin' を削除：人間族ATKを6に引き上げたため相性不利は廃止
   'elf-lizard',     // 鱗が矢を弾く
   'dwarf-ogre',     // 怪力が鎧ごと吹き飛ばす
   'goblin-ogre',    // 三すくみ：オーガ > ゴブリン
@@ -211,6 +231,7 @@ let lastTime     = 0;
 let mazeImg      = null;
 let rafId        = null;
 let gameStarted  = false;
+let isSimulating = false;
 let gameLog             = null;
 let humanAutoSpawnIndex = 0;  // 0=human 1=elf 2=dwarf のローテーション
 
@@ -645,6 +666,7 @@ function updateHumanAutoSpawn() {
 }
 
 function updateSpawnIndicator() {
+  if (isSimulating) return;
   const next = HUMAN_AUTO_TYPES[humanAutoSpawnIndex % HUMAN_AUTO_TYPES.length];
   document.querySelectorAll('.spawn-btn[id^="btn-"]').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-' + next)?.classList.add('active');
@@ -884,6 +906,7 @@ function takeSnapshot() {
 
 function saveLogToStorage() {
   if (!gameLog) return;
+  if (isSimulating) return;
   gameLog.duration = gameTime;
   // avgLifetime を計算してから保存
   const out = JSON.parse(JSON.stringify(gameLog));
@@ -947,6 +970,92 @@ function loop(ts) {
   updateSidebar();
 
   rafId = requestAnimationFrame(loop);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// HEADLESS SIMULATION
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function getWinner() {
+  const factions = ['human', 'goblin', 'lizard', 'ogre'];
+  const active = factions.filter(f => crystals.some(cr => cr.owner === f));
+  return active.length === 1 ? active[0] : null;
+}
+
+function simulateOneGame(maxTime = 600) {
+  grid = generateMaze(GRID);
+  units = [];
+  gameTime = 0;
+  humanAutoSpawnIndex = 0;
+  initCrystals();
+  initGameLog();
+
+  const dt = 1 / 60;
+  while (gameTime < maxTime) {
+    gameTime += dt;
+    if (gameLog && gameTime >= gameLog.nextSnapshotAt) {
+      takeSnapshot();
+      gameLog.nextSnapshotAt += 30;
+    }
+    updateHumanAutoSpawn();
+    updateUnits(dt);
+    updateCrystals(dt);
+    if (getWinner()) break;
+  }
+
+  gameLog.duration = gameTime;
+  const out = JSON.parse(JSON.stringify(gameLog));
+  for (const [, s] of Object.entries(out.unitStats)) {
+    s.avgLifetime = s.killed > 0 ? Math.round(s.totalLifetime / s.killed * 10) / 10 : null;
+  }
+  out.winner = getWinner() || 'none';
+  return out;
+}
+
+async function runBulkSimulation() {
+  const n = Math.max(1, parseInt(document.getElementById('sim-count').value) || 10);
+  const progress = document.getElementById('sim-progress');
+
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  isSimulating = true;
+  gameStarted = false;
+
+  const results = [];
+  for (let i = 0; i < n; i++) {
+    results.push(simulateOneGame(600));
+    progress.textContent = `実行中... ${i + 1}/${n}`;
+    await new Promise(r => setTimeout(r, 0));
+  }
+
+  isSimulating = false;
+
+  // Restore visual game state
+  grid = generateMaze(GRID);
+  units = [];
+  gameTime = 0;
+  humanAutoSpawnIndex = 0;
+  gameLog = null;
+  gameStarted = false;
+  initCrystals();
+  buildMazeImage();
+  render();
+  updateSidebar();
+
+  // Download combined JSON
+  const ts = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+  const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `dungeon_sim_${n}games_${ts}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  // Show win summary
+  const wins = {};
+  for (const r of results) wins[r.winner] = (wins[r.winner] || 0) + 1;
+  progress.textContent = '完了！ ' + Object.entries(wins)
+    .sort((a, b) => b[1] - a[1])
+    .map(([f, w]) => `${f}:${w}`)
+    .join('  ');
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

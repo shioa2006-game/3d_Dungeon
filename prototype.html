@@ -173,11 +173,11 @@ const CELL         = 14;
 const CANVAS_SIZE  = GRID * CELL;   // 714px (1.2x)
 
 const PATH_REFRESH   = 3.0;  // seconds between path recalculation
-const LOOP_COUNT     = 50;   // extra passages added to maze
+const LOOP_COUNT     = 200;  // extra passages added to maze
 const SPD_COMMON     = 1.0;  // 全種族共通移動速度（マス/秒）
 
 // AI種族別スポーン間隔（秒）
-const AI_SPAWN = { goblin: 14, lizard: 10, ogre: 18 };
+const AI_SPAWN = { goblin: 11, lizard: 13, ogre: 18 };
 
 // 人間側クリスタル1つあたりのスポーンクールダウン（秒）
 const HUMAN_SPAWN_COOLDOWN = 10;
@@ -194,12 +194,12 @@ const FACTIONS = {
 };
 
 const UNIT_DEFS = {
-  human:  { emoji: '🗡', hp: 30, atk: 6,  spd: SPD_COMMON, faction: 'human'  },
-  elf:    { emoji: '🏹', hp: 25, atk: 6,  spd: SPD_COMMON, faction: 'human'  },
-  dwarf:  { emoji: '⛏',  hp: 35, atk: 6,  spd: SPD_COMMON, faction: 'human'  },
-  goblin: { emoji: '👽', hp: 28, atk: 7,  spd: SPD_COMMON, faction: 'goblin' },
-  lizard: { emoji: '🦖', hp: 28, atk: 8,  spd: SPD_COMMON, faction: 'lizard' },
-  ogre:   { emoji: '👹', hp: 50, atk: 6,  spd: SPD_COMMON, faction: 'ogre'   },
+  human:  { emoji: '🗡', hp: 33, atk: 5,  spd: SPD_COMMON, faction: 'human'  },
+  elf:    { emoji: '🏹', hp: 28, atk: 6,  spd: SPD_COMMON, faction: 'human'  },
+  dwarf:  { emoji: '⛏',  hp: 38, atk: 4,  spd: SPD_COMMON, faction: 'human'  },
+  goblin: { emoji: '👽', hp: 28, atk: 6,  spd: SPD_COMMON, faction: 'goblin' },
+  lizard: { emoji: '🦖', hp: 28, atk: 7,  spd: SPD_COMMON, faction: 'lizard' },
+  ogre:   { emoji: '👹', hp: 52, atk: 6,  spd: SPD_COMMON, faction: 'ogre'   },
 };
 
 const AI_UNIT = { goblin: 'goblin', lizard: 'lizard', ogre: 'ogre' };
@@ -207,7 +207,7 @@ const AI_UNIT = { goblin: 'goblin', lizard: 'lizard', ogre: 'ogre' };
 // 不利な組み合わせのみ記載（ATK × 0.7）。記載のないペアはすべて × 1.0
 // 出典: GAME_DESIGN.md「6種族の相性システム」
 const AFFINITY_DEBUFF = new Set([
-  // 'human-goblin' を削除：人間族ATKを6に引き上げたため相性不利は廃止
+  'human-goblin',   // 三すくみ：ゴブリン > ヒューマン
   'elf-lizard',     // 鱗が矢を弾く
   'dwarf-ogre',     // 怪力が鎧ごと吹き飛ばす
   'goblin-ogre',    // 三すくみ：オーガ > ゴブリン
@@ -283,21 +283,23 @@ function generateMaze(size) {
     if (vert || horiz) { g[r][c] = 0; added++; }
   }
 
-  // Reduce dead ends: detect cells with only 1 open neighbor and break one adjacent wall
+  // Reduce dead ends: detect cells with only 1 open neighbor and break one adjacent wall (3 passes)
   const DIRS4 = [[-1,0],[1,0],[0,-1],[0,1]];
-  for (let r = 1; r < size - 1; r++) {
-    for (let c = 1; c < size - 1; c++) {
-      if (g[r][c] !== 0) continue;
-      const openDirs = DIRS4.filter(([dr,dc]) => g[r+dr][c+dc] === 0);
-      if (openDirs.length !== 1) continue; // dead end = 通路が1方向のみ
-      // 壁方向のうち境界内のものをランダムに1つ開ける
-      const wallDirs = DIRS4.filter(([dr,dc]) => {
-        const nr = r+dr, nc = c+dc;
-        return nr > 0 && nr < size-1 && nc > 0 && nc < size-1 && g[nr][nc] === 1;
-      });
-      if (wallDirs.length === 0) continue;
-      const [dr,dc] = wallDirs[Math.floor(Math.random() * wallDirs.length)];
-      g[r+dr][c+dc] = 0;
+  for (let pass = 0; pass < 3; pass++) {
+    for (let r = 1; r < size - 1; r++) {
+      for (let c = 1; c < size - 1; c++) {
+        if (g[r][c] !== 0) continue;
+        const openDirs = DIRS4.filter(([dr,dc]) => g[r+dr][c+dc] === 0);
+        if (openDirs.length !== 1) continue; // dead end = 通路が1方向のみ
+        // 壁方向のうち境界内のものをランダムに1つ開ける
+        const wallDirs = DIRS4.filter(([dr,dc]) => {
+          const nr = r+dr, nc = c+dc;
+          return nr > 0 && nr < size-1 && nc > 0 && nc < size-1 && g[nr][nc] === 1;
+        });
+        if (wallDirs.length === 0) continue;
+        const [dr,dc] = wallDirs[Math.floor(Math.random() * wallDirs.length)];
+        g[r+dr][c+dc] = 0;
+      }
     }
   }
 
@@ -365,6 +367,16 @@ function initCrystals() {
   const E = GRID - 2;  // 49
   const Z = 11;        // corner zone size
 
+  // 配置済みセルの重複防止
+  const usedCells = new Set();
+  function pickCells(r1, r2, c1, c2, n) {
+    const candidates = shuffle(openCells(r1, r2, c1, c2))
+      .filter(([r, c]) => !usedCells.has(`${r},${c}`));
+    const picked = candidates.slice(0, n);
+    picked.forEach(([r, c]) => usedCells.add(`${r},${c}`));
+    return picked;
+  }
+
   // 3 pre-claimed crystals per faction corner
   const cornerZones = [
     { owner: 'human',  r1: 1,   r2: Z,   c1: 1,   c2: Z   },
@@ -374,13 +386,14 @@ function initCrystals() {
   ];
 
   for (const z of cornerZones) {
-    const cells = shuffle(openCells(z.r1, z.r2, z.c1, z.c2)).slice(0, 3);
+    const cells = pickCells(z.r1, z.r2, z.c1, z.c2, 3);
+    const interval = z.owner === 'human' ? HUMAN_SPAWN_COOLDOWN : AI_SPAWN[z.owner];
     for (const [r, c] of cells) {
       crystals.push({
         r, c,
         owner: z.owner,
-        spawnTimer:    Math.random() * AI_SPAWN[z.owner],
-        lastSpawnTime: -HUMAN_SPAWN_COOLDOWN, // 初回はすぐスポーン可能
+        spawnTimer:    Math.random() * interval,  // 全種族共通：0〜CDのランダム待機
+        lastSpawnTime: -HUMAN_SPAWN_COOLDOWN,     // クリック操作用（人間のみ使用）
       });
     }
   }
@@ -393,14 +406,14 @@ function initCrystals() {
     { r1: E-Z-6,  r2: E-1,  c1: E-Z-6, c2: E-1  }, // オーガ拠点近傍
   ];
   for (const z of nearFactionZones) {
-    const cells = shuffle(openCells(z.r1, z.r2, z.c1, z.c2)).slice(0, 2);
+    const cells = pickCells(z.r1, z.r2, z.c1, z.c2, 2);
     for (const [r, c] of cells) {
       crystals.push({ r, c, owner: 'neutral', spawnTimer: 0, lastSpawnTime: -HUMAN_SPAWN_COOLDOWN });
     }
   }
 
   // 中央に8個の中立クリスタル
-  const midCells = shuffle(openCells(Z + 2, E - Z - 2, Z + 2, E - Z - 2)).slice(0, 8);
+  const midCells = pickCells(Z + 2, E - Z - 2, Z + 2, E - Z - 2, 8);
   for (const [r, c] of midCells) {
     crystals.push({ r, c, owner: 'neutral', spawnTimer: 0, lastSpawnTime: -HUMAN_SPAWN_COOLDOWN });
   }
@@ -408,10 +421,9 @@ function initCrystals() {
 
 function updateCrystals(dt) {
   for (const cr of crystals) {
-    // Human crystals spawn manually; neutral crystals don't spawn at all
-    if (cr.owner === 'neutral' || cr.owner === 'human') continue;
+    if (cr.owner === 'neutral') continue;
     cr.spawnTimer += dt;
-    const spawnInterval = AI_SPAWN[cr.owner];
+    const spawnInterval = cr.owner === 'human' ? HUMAN_SPAWN_COOLDOWN : AI_SPAWN[cr.owner];
     if (cr.spawnTimer >= spawnInterval) {
       cr.spawnTimer -= spawnInterval;
       trySpawnFromCrystal(cr);
@@ -420,16 +432,27 @@ function updateCrystals(dt) {
 }
 
 function trySpawnFromCrystal(cr) {
-  const type = AI_UNIT[cr.owner];
+  // ユニット種の決定（人間族は3種ローテーション、他種族は固定）
+  let type;
+  if (cr.owner === 'human') {
+    type = HUMAN_AUTO_TYPES[humanAutoSpawnIndex % HUMAN_AUTO_TYPES.length];
+  } else {
+    type = AI_UNIT[cr.owner];
+  }
   if (!type) return;
 
-  // 勢力ユニット上限チェック（所有クリスタル数 × UNIT_CAP_PER_CRYSTAL）
-  const cap       = crystals.filter(c => c.owner === cr.owner).length * UNIT_CAP_PER_CRYSTAL;
-  const current   = units.filter(u => u.faction === cr.owner).length;
+  // 勢力ユニット上限チェック（クリスタル1つごとに判定・全種族共通）
+  const cap     = crystals.filter(c => c.owner === cr.owner).length * UNIT_CAP_PER_CRYSTAL;
+  const current = units.filter(u => u.faction === cr.owner).length;
   if (current >= cap) return;
 
   units.push(makeUnit(type, cr.r, cr.c));
   recordSpawn(type);
+
+  if (cr.owner === 'human') {
+    humanAutoSpawnIndex++;
+    updateSpawnIndicator();
+  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -644,27 +667,6 @@ function updateUnits(dt) {
   units = units.filter(u => u.hp > 0);
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// HUMAN AUTO SPAWN
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function updateHumanAutoSpawn() {
-  // 勢力ユニット上限チェック（AI勢力と同じ: 所有クリスタル数 × UNIT_CAP_PER_CRYSTAL）
-  const cap     = crystals.filter(c => c.owner === 'human').length * UNIT_CAP_PER_CRYSTAL;
-  const current = units.filter(u => u.faction === 'human').length;
-  if (current >= cap) return;
-
-  for (const cr of crystals) {
-    if (cr.owner !== 'human') continue;
-    if (gameTime - cr.lastSpawnTime < HUMAN_SPAWN_COOLDOWN) continue;
-    const type = HUMAN_AUTO_TYPES[humanAutoSpawnIndex % HUMAN_AUTO_TYPES.length];
-    cr.lastSpawnTime = gameTime;
-    units.push(makeUnit(type, cr.r, cr.c));
-    recordSpawn(type);
-    humanAutoSpawnIndex++;
-    updateSpawnIndicator();
-  }
-}
-
 function updateSpawnIndicator() {
   if (isSimulating) return;
   const next = HUMAN_AUTO_TYPES[humanAutoSpawnIndex % HUMAN_AUTO_TYPES.length];
@@ -753,17 +755,14 @@ function render() {
     ctx.fillStyle = cr.owner === 'neutral' ? '#555' : '#ddd';
     ctx.fillText('💎', x, y);
 
-    // 人間クリスタルのスポーンクールダウン表示
+    // 人間クリスタルのスポーンクールダウン表示（spawnTimerベース・全種族共通の仕組みを反映）
     if (cr.owner === 'human' && gameStarted) {
-      const elapsed = gameTime - cr.lastSpawnTime;
-      if (elapsed < HUMAN_SPAWN_COOLDOWN) {
-        const ratio = elapsed / HUMAN_SPAWN_COOLDOWN;
-        // 暗いオーバーレイ
+      const ratio = cr.spawnTimer / HUMAN_SPAWN_COOLDOWN;
+      if (ratio < 1) {
         ctx.beginPath();
         ctx.arc(x, y, CELL / 2 - 0.5, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(0,0,0,0.45)';
         ctx.fill();
-        // 残り時間を示す扇形（白い弧が減っていく）
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.arc(x, y, CELL / 2 - 0.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio);
@@ -963,7 +962,6 @@ function loop(ts) {
     gameLog.nextSnapshotAt += 30;
   }
 
-  updateHumanAutoSpawn();
   updateUnits(dt);
   updateCrystals(dt);
   render();
@@ -996,7 +994,6 @@ function simulateOneGame(maxTime = 600) {
       takeSnapshot();
       gameLog.nextSnapshotAt += 30;
     }
-    updateHumanAutoSpawn();
     updateUnits(dt);
     updateCrystals(dt);
     if (getWinner()) break;

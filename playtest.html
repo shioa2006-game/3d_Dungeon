@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dungeon Playtest</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0d0d0d;
+  color: #eee;
+  font-family: 'Courier New', monospace;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+}
+h1 {
+  font-size: 16px;
+  color: #99bbff;
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+}
+#game { display: flex; gap: 12px; align-items: flex-start; }
+canvas {
+  border: 2px solid #555;
+  display: block;
+}
+#sidebar {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.panel {
+  background: #1a1a2e;
+  border: 1px solid #3a3a5a;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.panel-title {
+  font-size: 12px;
+  color: #ccc;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #3a3a5a;
+  padding-bottom: 5px;
+  font-weight: bold;
+}
+
+/* ── Player stats ── */
+#hp-bar-wrap {
+  background: #111;
+  border-radius: 3px;
+  height: 10px;
+  margin: 4px 0 8px;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+#hp-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.1s, background 0.1s;
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+}
+.stat-cell { display: flex; justify-content: space-between; align-items: center; }
+.stat-label { font-size: 12px; color: #aaa; }
+.stat-value { font-size: 14px; color: #fff; font-weight: bold; }
+.stat-value.gold { color: #ffcc00; }
+.equip-grid {
+  border-top: 1px solid #3a3a5a;
+  padding-top: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.equip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.equip-icon { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+.equip-name { color: #ddd; }
+.equip-name.empty { color: #555; font-style: italic; }
+
+/* ── Crystal panel ── */
+.crystal-btns { display: flex; gap: 6px; }
+.btn-heal {
+  flex: 1;
+  padding: 9px 6px;
+  background: #0a2a0a; border: 1px solid #2a7a2a; color: #6f6;
+  cursor: pointer; border-radius: 4px; font-size: 13px;
+  text-align: center; font-family: 'Courier New', monospace; font-weight: bold;
+}
+.btn-heal:hover:not(:disabled) { background: #0f3f0f; border-color: #4f4; }
+.btn-heal:disabled { background: #111; border-color: #2a3a2a; color: #446; cursor: not-allowed; }
+.btn-shop {
+  flex: 1;
+  padding: 9px 6px;
+  background: #2a1a00; border: 1px solid #7a5a00; color: #fc6;
+  cursor: pointer; border-radius: 4px; font-size: 13px;
+  text-align: center; font-family: 'Courier New', monospace; font-weight: bold;
+}
+.btn-shop:hover:not(:disabled) { background: #3f2800; border-color: #fc6; }
+.btn-shop:disabled { background: #111; border-color: #3a2a00; color: #642; cursor: not-allowed; }
+
+/* ── Generic buttons ── */
+.menu-btn {
+  display: block; width: 100%; margin-bottom: 4px;
+  padding: 9px 10px;
+  background: #1a1a2e; border: 1px solid #4455aa; color: #aabbee;
+  cursor: pointer; border-radius: 4px; font-size: 13px;
+  text-align: center; font-family: 'Courier New', monospace;
+}
+.menu-btn:hover { background: #222244; border-color: #6688ff; color: #ddeeff; }
+.menu-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Faction bars ── */
+.faction-entry { margin-bottom: 8px; }
+.faction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+.faction-name { font-size: 13px; font-weight: bold; }
+.faction-crystal { font-size: 18px; font-weight: bold; }
+.faction-unit { font-size: 12px; color: #bbb; }
+.faction-bar-bg {
+  background: #111;
+  border-radius: 3px;
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid #2a2a3a;
+}
+.faction-bar-fill { height: 100%; border-radius: 3px; transition: width 0.2s; }
+
+/* ── Operation hint ── */
+.hint-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #ccc;
+}
+.hint-key {
+  background: #2a2a40;
+  border: 1px solid #4a4a6a;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 11px;
+  color: #aad;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ── Turn display ── */
+#turn-display {
+  text-align: center;
+  font-size: 18px;
+  color: #cce;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+/* ── Modal overlay ── */
+.modal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal[hidden] { display: none; }
+.modal-body {
+  background: #181828;
+  border: 2px solid #5577cc;
+  border-radius: 8px;
+  padding: 18px;
+  min-width: 500px;
+  max-width: 740px;
+  color: #eee;
+  font-family: 'Courier New', monospace;
+}
+.modal-title {
+  font-size: 16px;
+  color: #99bbff;
+  border-bottom: 1px solid #3a3a5a;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+  font-weight: bold;
+}
+
+/* ── Battle ── */
+.battle-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.battle-side-title {
+  font-size: 13px;
+  color: #ccc;
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+.battle-unit {
+  background: #111;
+  border: 1px solid #3a3a5a;
+  border-radius: 4px;
+  padding: 7px 10px;
+  margin-bottom: 5px;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.battle-unit.player { border-color: #4488ff; background: #0a1a3a; color: #aaddff; }
+.battle-unit.dead { opacity: 0.3; text-decoration: line-through; }
+.battle-unit.target-btn { cursor: pointer; }
+.battle-unit.target-btn:hover { background: #3a1010; border-color: #ff5555; }
+.battle-bottom { display: flex; gap: 10px; margin-top: 12px; }
+.battle-btn {
+  flex: 1; padding: 12px;
+  background: #222233; border: 2px solid #4455aa; color: #cce;
+  cursor: pointer; border-radius: 4px; font-size: 14px;
+  font-family: 'Courier New', monospace; font-weight: bold;
+  min-height: 50px; box-sizing: border-box;
+}
+.battle-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.battle-btn:hover:not(:disabled) { background: #2a2a50; border-color: #6688ff; color: #eef; }
+.battle-btn.kb-selected { background: #2a2a50; border-color: #6688ff; color: #eef; box-shadow: inset 0 0 0 1px #6688ff; }
+#battle-log {
+  background: #0a0a12;
+  border: 1px solid #2a2a3a;
+  padding: 8px 10px;
+  height: 120px;
+  overflow-y: auto;
+  font-size: 12px;
+  color: #ccc;
+  line-height: 1.7;
+  margin-top: 12px;
+}
+#battle-log p { padding: 1px 0; border-bottom: 1px dotted #222; }
+#battle-prompt { font-size: 13px; color: #ffcc44; margin: 8px 0; text-align: center; font-weight: bold; }
+
+/* ── Shop ── */
+.shop-item {
+  background: #111;
+  border: 1px solid #3a3a5a;
+  border-radius: 4px;
+  padding: 9px 12px;
+  margin-bottom: 7px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  cursor: pointer;
+}
+.shop-item:hover { background: #1a2245; border-color: #6688ff; }
+.shop-item.cant-afford { opacity: 0.45; cursor: not-allowed; }
+.shop-item.cant-afford:hover { background: #111; border-color: #3a3a5a; }
+.shop-item.kb-selected { background: #1a2245; border-color: #6688ff; outline: 2px solid #6688ff; }
+.shop-item.cant-afford.kb-selected { background: #1a1a30; border-color: #445588; outline: 2px solid #445588; }
+.shop-slot {
+  display: inline-block;
+  background: #2a2a40;
+  color: #99aacc;
+  font-size: 10px;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-right: 4px;
+}
+.shop-effect { color: #88ccff; font-size: 12px; margin-top: 2px; }
+.shop-price { color: #ffcc00; font-weight: bold; font-size: 14px; white-space: nowrap; }
+
+/* ── Result ── */
+#result-screen .modal-body { text-align: center; }
+.result-title { font-size: 28px; margin: 24px 0; }
+.result-win { color: #44ff88; }
+.result-lose { color: #ff5566; }
+</style>
+</head>
+<body>
+<h1>🏰 DUNGEON PLAYTEST — 2D (Turn-Based)</h1>
+<div id="game">
+  <canvas id="canvas"></canvas>
+  <div id="sidebar">
+
+    <div class="panel">
+      <div id="turn-display">⏱ TURN 0</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">🤖 プレイヤー</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px;">
+        <span class="stat-label">HP</span>
+        <span style="font-size:13px;color:#fff;font-weight:bold;" id="p-hp">—</span>
+      </div>
+      <div id="hp-bar-wrap"><div id="hp-bar"></div></div>
+      <div class="stat-grid">
+        <div class="stat-cell"><span class="stat-label">ATK</span><span class="stat-value" id="p-atk">—</span></div>
+        <div class="stat-cell"><span class="stat-label">REC</span><span class="stat-value" id="p-rec">—</span></div>
+        <div class="stat-cell"><span class="stat-label">AGI</span><span class="stat-value" id="p-agi">—</span></div>
+        <div class="stat-cell"><span class="stat-label">💰</span><span class="stat-value gold" id="p-gold">0</span></div>
+      </div>
+      <div class="equip-grid">
+        <div class="equip-row"><span class="equip-icon">🗡️</span><span class="equip-name" id="eq-weapon">未装備</span></div>
+        <div class="equip-row"><span class="equip-icon">🛡️</span><span class="equip-name" id="eq-armor">未装備</span></div>
+        <div class="equip-row"><span class="equip-icon">💍</span><span class="equip-name" id="eq-accessory">未装備</span></div>
+      </div>
+    </div>
+
+    <div class="panel" id="crystal-panel">
+      <div class="panel-title">💎 自陣クリスタル</div>
+      <div class="crystal-btns">
+        <button class="btn-heal" id="btn-heal" onclick="healAtCrystal()">🩹 回復</button>
+        <button class="btn-shop" id="btn-shop" onclick="openShop()">🛒 ショップ</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">📊 勢力情報</div>
+      <div id="faction-display"></div>
+    </div>
+
+    <div class="panel">
+      <button class="menu-btn" onclick="restartGame()" style="color:#ff8888;border-color:#884444;">🔄 リスタート</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Battle Modal -->
+<div class="modal" id="battle-modal" hidden>
+  <div class="modal-body">
+    <div class="modal-title">⚔️ 戦闘</div>
+    <div class="battle-top">
+      <div>
+        <div class="battle-side-title">敵: <span id="battle-enemy-name"></span></div>
+        <div id="battle-enemy-list"></div>
+      </div>
+      <div>
+        <div class="battle-side-title">人間族</div>
+        <div id="battle-ally-list"></div>
+      </div>
+    </div>
+    <div id="battle-prompt"></div>
+    <div class="battle-bottom" id="battle-actions">
+      <button class="battle-btn" id="btn-fight" onclick="battleState && battleState.selectedTarget !== null && battleAttack(battleState.selectedTarget)">⚔ 戦う</button>
+      <button class="battle-btn" id="btn-flee" onclick="battleFlee()">🏃 逃げる</button>
+    </div>
+    <div id="battle-log"></div>
+  </div>
+</div>
+
+<!-- Shop Modal -->
+<div class="modal" id="shop-modal" hidden>
+  <div class="modal-body">
+    <div class="modal-title">🛒 ショップ　<span style="color:#ffaa44;font-weight:normal">所持GOLD: <span id="shop-gold">0</span></span></div>
+    <div style="font-size:10px;color:#888;margin-bottom:8px;">※ 既存装備は半値で自動買取。購入で1ターン消費。</div>
+    <div id="shop-items"></div>
+    <button class="menu-btn" onclick="closeShop()" style="margin-top:8px;">閉じる（ターン消費なし）</button>
+  </div>
+</div>
+
+<!-- Result Modal -->
+<div class="modal" id="result-screen" hidden>
+  <div class="modal-body">
+    <div class="result-title" id="result-title"></div>
+    <div id="result-detail" style="color:#aaa;margin-bottom:20px;"></div>
+    <button class="menu-btn" onclick="restartGame()" style="color:#8cf;">🔄 もう一度プレイ</button>
+  </div>
+</div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CONSTANTS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const GRID         = 51;
+const CELL         = 28;               // 1セルのピクセル数（ズームイン）
+const CANVAS_SIZE  = GRID * CELL;      // オフスクリーン迷路描画用（フルマップ）
+const VIEW_CELLS   = 26;               // 表示セル数（26×26 ≈ マップの1/4面積）
+const CANVAS_VIEW  = VIEW_CELLS * CELL; // 実際のcanvasサイズ
+
+const PATH_REFRESH = 3;    // turns
+const LOOP_COUNT   = 200;
+const SPD_COMMON   = 1.0;
+
+const AI_SPAWN = { goblin: 11, lizard: 13, ogre: 18 };
+const HUMAN_SPAWN_COOLDOWN = 10;
+const UNIT_CAP_PER_CRYSTAL = 5;
+const UNIT_CAP_MAX = 100;
+
+const FACTIONS = {
+  human:   { name: '人間族',   color: '#4488ff', zone: [0, 12, 0,  12] },
+  goblin:  { name: 'ゴブリン', color: '#44cc44', zone: [0, 12, 38, 50] },
+  lizard:  { name: 'リザード', color: '#ff8844', zone: [38, 50, 0, 12] },
+  ogre:    { name: 'オーガ',   color: '#cc44cc', zone: [38, 50, 38, 50] },
+  neutral: { name: '中立',     color: '#666666', zone: null },
+};
+
+const UNIT_DEFS = {
+  human:  { emoji: '🗡', hp: 35, atk: 5, spd: SPD_COMMON, faction: 'human'  },
+  elf:    { emoji: '🏹', hp: 30, atk: 6, spd: SPD_COMMON, faction: 'human'  },
+  dwarf:  { emoji: '⛏', hp: 40, atk: 4, spd: SPD_COMMON, faction: 'human'  },
+  goblin: { emoji: '👽', hp: 28, atk: 5, spd: SPD_COMMON, faction: 'goblin' },
+  lizard: { emoji: '🦖', hp: 28, atk: 7, spd: SPD_COMMON, faction: 'lizard' },
+  ogre:   { emoji: '👹', hp: 52, atk: 6, spd: SPD_COMMON, faction: 'ogre'   },
+};
+
+const AI_UNIT = { goblin: 'goblin', lizard: 'lizard', ogre: 'ogre' };
+const HUMAN_AUTO_TYPES = ['human', 'elf', 'dwarf'];
+
+const AFFINITY_DEBUFF = new Set([
+  'human-goblin', 'elf-lizard', 'dwarf-ogre',
+  'goblin-ogre',  'lizard-goblin', 'ogre-lizard',
+]);
+function getAffinityMult(a, d) {
+  return AFFINITY_DEBUFF.has(`${a}-${d}`) ? 0.7 : 1.0;
+}
+
+// Player initial stats — 現人間族中で最強クラス
+const PLAYER_INIT = { hp: 40, atk: 7, rec: 5, agi: 10 };
+const FLEE_BASE = 0.5;
+
+// GOLD drops per monster type
+function goldDrop() { return 10 + Math.floor(Math.random() * 11); }
+
+// Shop pool
+const SHOP_POOL = [
+  { slot: 'weapon', name: '鉄の剣',             price: 30,  mod: { atk: 2 } },
+  { slot: 'weapon', name: '鋼の剣',             price: 90,  mod: { atk: 4 } },
+  { slot: 'weapon', name: 'ミスリル剣',         price: 200, mod: { atk: 7 } },
+  { slot: 'weapon', name: 'ゴブリン特攻の剣',   price: 70,  mod: { atk: 2 }, bonus: { goblin: 1.8 } },
+  { slot: 'weapon', name: 'リザード特攻の槍',   price: 70,  mod: { atk: 2 }, bonus: { lizard: 1.8 } },
+  { slot: 'weapon', name: 'オーガ特攻の大剣',   price: 70,  mod: { atk: 2 }, bonus: { ogre:   1.8 } },
+  { slot: 'armor',  name: '革の鎧',             price: 30,  mod: { hp: 8 } },
+  { slot: 'armor',  name: '鎖帷子',             price: 80,  mod: { hp: 18 } },
+  { slot: 'armor',  name: '板金鎧',             price: 180, mod: { hp: 35 } },
+  { slot: 'accessory', name: '治癒の指輪',       price: 40,  mod: { rec: 3 } },
+  { slot: 'accessory', name: '大治癒の指輪',     price: 120, mod: { rec: 8 } },
+  { slot: 'accessory', name: '疾風のブーツ',     price: 50,  mod: { agi: 10 } },
+  { slot: 'accessory', name: '駿足のブーツ',     price: 130, mod: { agi: 25 } },
+  { slot: 'accessory', name: '力のブレスレット', price: 60,  mod: { atk: 1 } },
+];
+const SHOP_ROLL_N = 5;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STATE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let grid, crystals, units, player, turn, humanAutoSpawnIndex;
+let mazeImg = null;
+let camR = 0, camC = 0;
+let gameEnded = false;
+let battleState = null;
+let shopItems = null;
+let shopSelectedIdx = 0;
+let onCrystal = null;
+
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+canvas.width  = CANVAS_VIEW;
+canvas.height = CANVAS_VIEW;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MAZE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function generateMaze(size) {
+  const g = Array.from({ length: size }, () => new Uint8Array(size).fill(1));
+  g[1][1] = 0;
+  const stack = [[1, 1]];
+  while (stack.length) {
+    const [r, c] = stack[stack.length - 1];
+    const dirs = [[-2,0],[2,0],[0,-2],[0,2]];
+    for (let i = 3; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
+    }
+    let moved = false;
+    for (const [dr, dc] of dirs) {
+      const nr = r + dr, nc = c + dc;
+      if (nr > 0 && nr < size - 1 && nc > 0 && nc < size - 1 && g[nr][nc] === 1) {
+        g[r + dr / 2][c + dc / 2] = 0;
+        g[nr][nc] = 0;
+        stack.push([nr, nc]);
+        moved = true;
+        break;
+      }
+    }
+    if (!moved) stack.pop();
+  }
+  let added = 0;
+  for (let attempt = 0; added < LOOP_COUNT && attempt < 2000; attempt++) {
+    const r = 1 + Math.floor(Math.random() * (size - 2));
+    const c = 1 + Math.floor(Math.random() * (size - 2));
+    if (g[r][c] !== 1) continue;
+    const vert  = r > 0 && r < size - 1 && g[r-1][c] === 0 && g[r+1][c] === 0;
+    const horiz = c > 0 && c < size - 1 && g[r][c-1] === 0 && g[r][c+1] === 0;
+    if (vert || horiz) { g[r][c] = 0; added++; }
+  }
+  const DIRS4 = [[-1,0],[1,0],[0,-1],[0,1]];
+  for (let pass = 0; pass < 3; pass++) {
+    for (let r = 1; r < size - 1; r++) {
+      for (let c = 1; c < size - 1; c++) {
+        if (g[r][c] !== 0) continue;
+        const openDirs = DIRS4.filter(([dr,dc]) => g[r+dr][c+dc] === 0);
+        if (openDirs.length !== 1) continue;
+        const wallDirs = DIRS4.filter(([dr,dc]) => {
+          const nr = r+dr, nc = c+dc;
+          return nr > 0 && nr < size-1 && nc > 0 && nc < size-1 && g[nr][nc] === 1;
+        });
+        if (wallDirs.length === 0) continue;
+        const [dr,dc] = wallDirs[Math.floor(Math.random() * wallDirs.length)];
+        g[r+dr][c+dc] = 0;
+      }
+    }
+  }
+  return g;
+}
+
+function bfs(sr, sc, gr, gc) {
+  if (!grid[gr] || grid[gr][gc] !== 0) return null;
+  if (sr === gr && sc === gc) return [[sr, sc]];
+  const key = (r, c) => r * GRID + c;
+  const prev = new Map([[key(sr, sc), -1]]);
+  const q = [[sr, sc]];
+  outer:
+  for (let i = 0; i < q.length; i++) {
+    const [r, c] = q[i];
+    for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const nr = r + dr, nc = c + dc;
+      if (nr < 0 || nr >= GRID || nc < 0 || nc >= GRID || grid[nr][nc] !== 0) continue;
+      const k = key(nr, nc);
+      if (prev.has(k)) continue;
+      prev.set(k, key(r, c));
+      if (nr === gr && nc === gc) break outer;
+      q.push([nr, nc]);
+    }
+  }
+  const gk = key(gr, gc);
+  if (!prev.has(gk)) return null;
+  const path = [];
+  let k = gk;
+  while (k !== -1) {
+    path.unshift([Math.floor(k / GRID), k % GRID]);
+    k = prev.get(k);
+  }
+  return path;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CRYSTALS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function openCells(r1, r2, c1, c2) {
+  const out = [];
+  for (let r = r1; r <= r2; r++)
+    for (let c = c1; c <= c2; c++)
+      if (grid[r]?.[c] === 0) out.push([r, c]);
+  return out;
+}
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function initCrystals() {
+  crystals = [];
+  const E = GRID - 2;
+  const Z = 11;
+  const usedCells = new Set();
+  function pickCells(r1, r2, c1, c2, n) {
+    const candidates = shuffle(openCells(r1, r2, c1, c2))
+      .filter(([r, c]) => !usedCells.has(`${r},${c}`));
+    const picked = candidates.slice(0, n);
+    picked.forEach(([r, c]) => usedCells.add(`${r},${c}`));
+    return picked;
+  }
+  const cornerZones = [
+    { owner: 'human',  r1: 1,   r2: Z,   c1: 1,   c2: Z   },
+    { owner: 'goblin', r1: 1,   r2: Z,   c1: E-Z, c2: E   },
+    { owner: 'lizard', r1: E-Z, r2: E,   c1: 1,   c2: Z   },
+    { owner: 'ogre',   r1: E-Z, r2: E,   c1: E-Z, c2: E   },
+  ];
+  for (const z of cornerZones) {
+    const cells = pickCells(z.r1, z.r2, z.c1, z.c2, 3);
+    const interval = z.owner === 'human' ? HUMAN_SPAWN_COOLDOWN : AI_SPAWN[z.owner];
+    for (const [r, c] of cells) {
+      crystals.push({ r, c, owner: z.owner, spawnTimer: Math.random() * interval });
+    }
+  }
+  const nearFactionZones = [
+    { r1: 1,     r2: Z+6, c1: Z+1,   c2: Z+6  },
+    { r1: 1,     r2: Z+6, c1: E-Z-6, c2: E-1  },
+    { r1: E-Z-6, r2: E-1, c1: Z+1,   c2: Z+6  },
+    { r1: E-Z-6, r2: E-1, c1: E-Z-6, c2: E-1  },
+  ];
+  for (const z of nearFactionZones) {
+    const cells = pickCells(z.r1, z.r2, z.c1, z.c2, 2);
+    for (const [r, c] of cells) crystals.push({ r, c, owner: 'neutral', spawnTimer: 0 });
+  }
+  const midCells = pickCells(Z + 2, E - Z - 2, Z + 2, E - Z - 2, 8);
+  for (const [r, c] of midCells) crystals.push({ r, c, owner: 'neutral', spawnTimer: 0 });
+}
+
+function updateCrystals(dt) {
+  for (const cr of crystals) {
+    if (cr.owner === 'neutral') continue;
+    cr.spawnTimer += dt;
+    const interval = cr.owner === 'human' ? HUMAN_SPAWN_COOLDOWN : AI_SPAWN[cr.owner];
+    if (cr.spawnTimer >= interval) {
+      cr.spawnTimer -= interval;
+      trySpawnFromCrystal(cr);
+    }
+  }
+}
+
+function trySpawnFromCrystal(cr) {
+  let type;
+  if (cr.owner === 'human') {
+    type = HUMAN_AUTO_TYPES[humanAutoSpawnIndex % HUMAN_AUTO_TYPES.length];
+  } else {
+    type = AI_UNIT[cr.owner];
+  }
+  if (!type) return;
+  const cap = Math.min(UNIT_CAP_MAX, crystals.filter(c => c.owner === cr.owner).length * UNIT_CAP_PER_CRYSTAL);
+  const current = units.filter(u => u.faction === cr.owner).length;
+  if (current >= cap) return;
+  units.push(makeUnit(type, cr.r, cr.c));
+  if (cr.owner === 'human') humanAutoSpawnIndex++;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// UNITS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function makeUnit(type, r, c) {
+  const d = UNIT_DEFS[type];
+  const faction = d.faction;
+  const candidates = crystals.filter(cr => cr.owner !== faction);
+  const targetCrystal = candidates.length > 0
+    ? candidates[Math.floor(Math.random() * candidates.length)]
+    : null;
+  return {
+    type, r, c,
+    emoji:         d.emoji,
+    faction,
+    hp:            d.hp,
+    maxHp:         d.hp,
+    atk:           d.atk,
+    spd:           d.spd,
+    path:          null,
+    pathTimer:     Math.random() * 2,
+    moveTimer:     0,
+    inCombat:      false,
+    targetCrystal,
+    retreating:    false,
+    healing:       false,
+    retreatTarget: null,
+    battleLocked:  false,
+  };
+}
+
+function nearestFriendlyCrystal(unit) {
+  let best = null, bestDist = Infinity;
+  for (const cr of crystals) {
+    if (cr.owner !== unit.faction) continue;
+    const d = Math.abs(cr.r - unit.r) + Math.abs(cr.c - unit.c);
+    if (d < bestDist) { bestDist = d; best = cr; }
+  }
+  return best;
+}
+function bestTarget(unit) {
+  let best = null, bestDist = Infinity;
+  for (const cr of crystals) {
+    if (cr.owner === unit.faction) continue;
+    const d = Math.abs(cr.r - unit.r) + Math.abs(cr.c - unit.c);
+    if (d < bestDist) { bestDist = d; best = cr; }
+  }
+  return best;
+}
+function randomTarget(unit) {
+  const candidates = crystals.filter(cr => cr.owner !== unit.faction);
+  if (candidates.length === 0) return null;
+  const weights = candidates.map(cr => {
+    const d = Math.abs(cr.r - unit.r) + Math.abs(cr.c - unit.c);
+    return 1 / (d + 1);
+  });
+  const total = weights.reduce((a, b) => a + b, 0);
+  let rand = Math.random() * total;
+  for (let i = 0; i < candidates.length; i++) {
+    rand -= weights[i];
+    if (rand <= 0) return candidates[i];
+  }
+  return candidates[candidates.length - 1];
+}
+
+function updateUnits(dt) {
+  for (const u of units) {
+    if (u.hp <= 0) continue;
+    if (u.battleLocked) continue;
+
+    // AI-vs-AI combat: check live positions (not pre-built map, to catch same-turn moves)
+    const enemies = units.filter(e =>
+      e.r === u.r && e.c === u.c &&
+      e.faction !== u.faction && e.hp > 0 && !e.battleLocked
+    );
+    if (enemies.length > 0) {
+      u.inCombat = true;
+      u.healing = false;
+      const target = enemies[Math.floor(Math.random() * enemies.length)];
+      target.hp -= u.atk * getAffinityMult(u.type, target.type) * dt;
+      continue;
+    }
+    u.inCombat = false;
+
+    if (u.healing) {
+      if (!u.retreatTarget || u.retreatTarget.owner !== u.faction) {
+        const next = nearestFriendlyCrystal(u);
+        if (next) { u.retreatTarget = next; u.retreating = true; u.healing = false; u.path = null; u.pathTimer = 0; }
+        else     { u.healing = false; u.retreatTarget = null; }
+      } else {
+        u.hp = Math.min(u.maxHp, u.hp + (u.maxHp / 8) * dt);
+        if (u.hp >= u.maxHp) { u.healing = false; u.retreatTarget = null; u.path = null; u.pathTimer = 0; }
+      }
+      continue;
+    }
+
+    if (!u.retreating && u.hp <= u.maxHp / 3) {
+      const cr = nearestFriendlyCrystal(u);
+      if (cr) { u.retreatTarget = cr; u.retreating = true; u.path = null; u.pathTimer = 0; }
+    }
+
+    if (u.retreating) {
+      if (!u.retreatTarget || u.retreatTarget.owner !== u.faction) {
+        const next = nearestFriendlyCrystal(u);
+        if (next) { u.retreatTarget = next; u.path = null; u.pathTimer = 0; }
+        else     { u.retreating = false; u.retreatTarget = null; }
+      } else if (u.r === u.retreatTarget.r && u.c === u.retreatTarget.c) {
+        u.retreating = false; u.healing = true; u.path = null;
+      }
+    }
+
+    if (!u.retreating && !u.healing) {
+      const cr = crystals.find(x => x.r === u.r && x.c === u.c && x.owner !== u.faction);
+      if (cr) {
+        cr.owner = u.faction;
+        cr.spawnTimer = 0;
+        u.path = null; u.pathTimer = 0;
+        u.targetCrystal = randomTarget(u);
+      }
+    }
+
+    if (!u.retreating && u.targetCrystal && u.targetCrystal.owner === u.faction) {
+      u.targetCrystal = randomTarget(u);
+      u.path = null; u.pathTimer = 0;
+    }
+
+    u.pathTimer -= dt;
+    if (u.pathTimer <= 0) {
+      u.pathTimer = PATH_REFRESH;
+      const navTarget = u.retreating
+        ? u.retreatTarget
+        : (u.targetCrystal ? u.targetCrystal : bestTarget(u));
+      u.path = navTarget ? bfs(u.r, u.c, navTarget.r, navTarget.c) : null;
+    }
+
+    u.moveTimer -= dt;
+    if (u.moveTimer <= 0) {
+      u.moveTimer = 1 / u.spd;
+      if (u.path && u.path.length > 1) {
+        u.path.shift();
+        u.r = u.path[0][0];
+        u.c = u.path[0][1];
+      } else {
+        u.path = null; u.pathTimer = 0;
+      }
+    }
+  }
+  units = units.filter(u => u.hp > 0);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PLAYER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function createPlayer() {
+  return {
+    r: 0, c: 0,
+    hp: PLAYER_INIT.hp,
+    gold: 0,
+    equip: { weapon: null, armor: null, accessory: null },
+  };
+}
+
+function playerStats() {
+  let s = { hp: PLAYER_INIT.hp, atk: PLAYER_INIT.atk, rec: PLAYER_INIT.rec, agi: PLAYER_INIT.agi };
+  for (const slot of ['weapon', 'armor', 'accessory']) {
+    const eq = player.equip[slot];
+    if (!eq?.mod) continue;
+    if (eq.mod.hp)  s.hp  += eq.mod.hp;
+    if (eq.mod.atk) s.atk += eq.mod.atk;
+    if (eq.mod.rec) s.rec += eq.mod.rec;
+    if (eq.mod.agi) s.agi += eq.mod.agi;
+  }
+  return s;
+}
+
+function playerAtkVs(race) {
+  const { atk } = playerStats();
+  const w = player.equip.weapon;
+  if (w?.bonus?.[race]) return Math.max(1, Math.floor(atk * w.bonus[race]));
+  return atk;
+}
+
+function spawnPlayerAtHome() {
+  const home = crystals.find(c => c.owner === 'human');
+  if (home) { player.r = home.r; player.c = home.c; }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// TURN FLOW
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function processWorldTurn() {
+  if (gameEnded) return;
+  turn++;
+  updateUnits(1.0);
+  updateCrystals(1.0);
+}
+
+function tryMovePlayer(dr, dc) {
+  if (gameEnded || battleState || shopItems) return;
+  const nr = player.r + dr, nc = player.c + dc;
+  if (nr < 0 || nr >= GRID || nc < 0 || nc >= GRID) return;
+  if (grid[nr][nc] !== 0) return;
+
+  player.r = nr; player.c = nc;
+
+  // Claim crystal underfoot
+  playerClaimCrystal();
+
+  // Contact with enemy on destination cell?
+  const enemy = units.find(u => u.r === nr && u.c === nc && u.hp > 0 && u.faction !== 'human');
+  if (enemy) {
+    startBattle(enemy);
+    return;
+  }
+
+  processWorldTurn();
+  afterWorldTurn();
+}
+
+function playerClaimCrystal() {
+  const cr = crystals.find(c => c.r === player.r && c.c === player.c && c.owner !== 'human');
+  if (cr) {
+    cr.owner = 'human';
+    cr.spawnTimer = 0;
+  }
+}
+
+function afterWorldTurn() {
+  // Enemy may have moved onto player's cell
+  const enemy = units.find(u => u.r === player.r && u.c === player.c && u.hp > 0 && u.faction !== 'human');
+  if (enemy) { startBattle(enemy); return; }
+
+  updateOnCrystal();
+  if (checkWinLoss()) return;
+  render(); updateSidebar();
+}
+
+function updateOnCrystal() {
+  onCrystal = crystals.find(c => c.r === player.r && c.c === player.c && c.owner === 'human') || null;
+  const on = !!onCrystal;
+  document.getElementById('btn-heal').disabled = !on;
+  document.getElementById('btn-shop').disabled = !on;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// BATTLE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function startBattle(contactEnemy) {
+  const race = contactEnemy.faction;
+
+  // Enemy side: contact + same-race in 8-adjacent to contact cell (max 5)
+  const enemies = [contactEnemy];
+  for (const u of units) {
+    if (u === contactEnemy || u.hp <= 0) continue;
+    if (u.faction !== race) continue;
+    if (Math.abs(u.r - contactEnemy.r) <= 1 && Math.abs(u.c - contactEnemy.c) <= 1) {
+      if (enemies.length < 5) enemies.push(u);
+    }
+  }
+
+  // Ally side: human AI in 8-adjacent to player (max 4)
+  const allyUnits = [];
+  for (const u of units) {
+    if (u.hp <= 0 || u.faction !== 'human') continue;
+    if (Math.abs(u.r - player.r) <= 1 && Math.abs(u.c - player.c) <= 1) {
+      if (allyUnits.length < 4) allyUnits.push(u);
+    }
+  }
+
+  for (const e of enemies) e.battleLocked = true;
+  for (const a of allyUnits) a.battleLocked = true;
+
+  battleState = {
+    enemyRace: race,
+    enemies, allyUnits,
+    log: [`⚔ ${FACTIONS[race].name}との戦闘開始！`],
+    selectedTarget: 0,     // 選択中の敵インデックス（↑↓で変更）。開始時は1番上を選択
+    selectedCommand: 0,    // 0=戦う 1=逃げる（←→で変更）
+  };
+
+  document.getElementById('battle-modal').hidden = false;
+  renderBattle();
+}
+
+function renderBattle() {
+  if (!battleState) return;
+  document.getElementById('battle-enemy-name').textContent = FACTIONS[battleState.enemyRace].name;
+
+  // Enemy list — always selectable if alive
+  const enemyHtml = battleState.enemies.map((e, i) => {
+    const dead = e.hp <= 0;
+    const selected = battleState.selectedTarget === i;
+    let cls = `battle-unit${dead ? ' dead' : ''}${!dead ? ' target-btn' : ''}`;
+    const style = selected ? ' style="border-color:#ff5555;background:#3a1010;"' : '';
+    const click = !dead ? `onclick="selectBattleTarget(${i})"` : '';
+    const hpDisp = dead ? '撃破' : `HP ${Math.max(0, Math.ceil(e.hp))}/${e.maxHp}`;
+    const mark = selected ? ' ◀' : '';
+    return `<div class="${cls}"${style} ${click}>
+      <span>${e.emoji} ${e.type}${mark}</span>
+      <span>${hpDisp} ATK ${e.atk}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('battle-enemy-list').innerHTML = enemyHtml;
+
+  // Ally list (player first, then AI)
+  const s = playerStats();
+  let allyHtml = `<div class="battle-unit player">
+    <span>🤖 プレイヤー</span>
+    <span>HP ${Math.max(0, Math.ceil(player.hp))}/${s.hp} ATK ${playerAtkVs(battleState.enemyRace)}</span>
+  </div>`;
+  allyHtml += battleState.allyUnits.map(a => {
+    const dead = a.hp <= 0;
+    const hpDisp = dead ? '撃破' : `HP ${Math.max(0, Math.ceil(a.hp))}/${a.maxHp}`;
+    return `<div class="battle-unit${dead ? ' dead' : ''}">
+      <span>${a.emoji} ${a.type}</span>
+      <span>${hpDisp} ATK ${a.atk}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('battle-ally-list').innerHTML = allyHtml;
+
+  // Prompt
+  const cmdName = battleState.selectedCommand === 0 ? '⚔ 戦う' : '🏃 逃げる';
+  const targetName = battleState.selectedTarget !== null
+    ? `${battleState.enemies[battleState.selectedTarget]?.emoji} を選択中`
+    : '敵未選択';
+  document.getElementById('battle-prompt').textContent =
+    `► ${targetName}　[${cmdName}]　←→コマンド / ↑↓ターゲット / Enterで実行`;
+
+  // コマンドボタンのハイライト
+  const fightBtn = document.getElementById('btn-fight');
+  const fleeBtn  = document.getElementById('btn-flee');
+  if (fightBtn) {
+    fightBtn.disabled = battleState.selectedCommand === 0 && battleState.selectedTarget === null;
+    fightBtn.classList.toggle('kb-selected', battleState.selectedCommand === 0);
+  }
+  if (fleeBtn) fleeBtn.classList.toggle('kb-selected', battleState.selectedCommand === 1);
+
+  // Log
+  document.getElementById('battle-log').innerHTML =
+    battleState.log.slice(0, 30).map(l => `<p>${l}</p>`).join('');
+}
+
+function selectBattleTarget(idx) {
+  if (!battleState) return;
+  if (battleState.enemies[idx]?.hp <= 0) return;
+  battleState.selectedTarget = idx;
+  renderBattle();
+}
+
+function battleAttack(idx) {
+  if (!battleState) return;
+  const target = battleState.enemies[idx];
+  if (!target || target.hp <= 0) return;
+
+  // Player attack
+  const dmg = playerAtkVs(target.type);
+  target.hp -= dmg;
+  battleState.log.unshift(`🤖 → ${target.emoji} に ${dmg} ダメージ`);
+  if (target.hp <= 0) {
+    const g = goldDrop();
+    player.gold += g;
+    battleState.log.unshift(`💀 ${target.emoji} 撃破！ +${g} GOLD`);
+  }
+
+  // Ally AI attacks random alive enemy
+  for (const a of battleState.allyUnits) {
+    if (a.hp <= 0) continue;
+    const alive = battleState.enemies.filter(e => e.hp > 0);
+    if (alive.length === 0) break;
+    const t = alive[Math.floor(Math.random() * alive.length)];
+    const mult = getAffinityMult(a.type, t.type);
+    const d = Math.max(1, Math.floor(a.atk * mult));
+    t.hp -= d;
+    battleState.log.unshift(`${a.emoji} → ${t.emoji} に ${d} ダメージ`);
+    if (t.hp <= 0) {
+      const g = goldDrop();
+      player.gold += g;
+      battleState.log.unshift(`💀 ${t.emoji} 撃破！ +${g} GOLD`);
+    }
+  }
+
+  // Check enemy wipeout
+  if (battleState.enemies.every(e => e.hp <= 0)) {
+    battleState.log.unshift(`✨ 戦闘勝利！`);
+    processWorldTurn();
+    endBattle('win');
+    return;
+  }
+
+  // Enemy counter-attack
+  enemyBattleTurn();
+
+  // World turn
+  processWorldTurn();
+
+  if (player.hp <= 0) { endBattle('dead'); return; }
+
+  battleState.selectedTarget = battleState.enemies.findIndex(e => e.hp > 0);
+  if (battleState.selectedTarget < 0) battleState.selectedTarget = null;
+  renderBattle();
+  updateSidebar();
+}
+
+function enemyBattleTurn() {
+  for (const e of battleState.enemies) {
+    if (e.hp <= 0) continue;
+    // Target pool: player + alive allies
+    const pool = [{ isPlayer: true }].concat(
+      battleState.allyUnits.filter(a => a.hp > 0).map(a => ({ isPlayer: false, ref: a }))
+    );
+    if (pool.length === 0) break;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    if (pick.isPlayer) {
+      const mult = getAffinityMult(e.type, 'human');
+      const d = Math.max(1, Math.floor(e.atk * mult));
+      player.hp -= d;
+      battleState.log.unshift(`${e.emoji} → 🤖 に ${d} ダメージ`);
+      if (player.hp <= 0) return;
+    } else {
+      const mult = getAffinityMult(e.type, pick.ref.type);
+      const d = Math.max(1, Math.floor(e.atk * mult));
+      pick.ref.hp -= d;
+      battleState.log.unshift(`${e.emoji} → ${pick.ref.emoji} に ${d} ダメージ`);
+    }
+  }
+}
+
+function battleFlee() {
+  if (!battleState) return;
+  const { agi } = playerStats();
+  const chance = Math.min(0.95, Math.max(0.1, FLEE_BASE + (agi - 10) * 0.02));
+  const roll = Math.random();
+  if (roll < chance) {
+    battleState.log.unshift(`🏃 逃走成功！ (確率 ${Math.round(chance*100)}%)`);
+    processWorldTurn();
+    endBattle('flee');
+  } else {
+    battleState.log.unshift(`❗ 逃走失敗！ (確率 ${Math.round(chance*100)}%)`);
+    enemyBattleTurn();
+    processWorldTurn();
+    if (player.hp <= 0) { endBattle('dead'); return; }
+    renderBattle();
+    updateSidebar();
+  }
+}
+
+function endBattle(result) {
+  // Unlock survivors & cleanup dead
+  for (const e of battleState.enemies) e.battleLocked = false;
+  for (const a of battleState.allyUnits) a.battleLocked = false;
+  units = units.filter(u => u.hp > 0);
+
+  const killerRace = battleState.enemyRace;
+  battleState = null;
+  document.getElementById('battle-modal').hidden = true;
+
+  if (result === 'dead') {
+    playerDeath(killerRace);
+  }
+
+  // 逃走・死亡時はその場に留まる。クリスタルメニューは次の移動時まで非表示
+  if (result !== 'win') {
+    onCrystal = null;
+    document.getElementById('btn-heal').disabled = true;
+    document.getElementById('btn-shop').disabled = true;
+  } else {
+    playerClaimCrystal();
+    updateOnCrystal();
+  }
+  if (checkWinLoss()) return;
+  render(); updateSidebar();
+}
+
+function playerDeath(killerRace) {
+  const humanCrystals = crystals.filter(c => c.owner === 'human');
+  if (humanCrystals.length === 1) {
+    // 最後の1拠点 → 敵に陥落させて既存の敗北判定に委ねる
+    humanCrystals[0].owner = killerRace;
+    humanCrystals[0].spawnTimer = 0;
+    return;
+  }
+  player.gold = Math.floor(player.gold / 2);
+  const { hp } = playerStats();
+  player.hp = hp;
+  spawnPlayerAtHome();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CRYSTAL ACTIONS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function healAtCrystal() {
+  if (!onCrystal || battleState || shopItems) return;
+  const s = playerStats();
+  player.hp = Math.min(s.hp, player.hp + s.rec);
+  processWorldTurn();
+  afterWorldTurn();
+}
+
+function openShop() {
+  if (!onCrystal || battleState || shopItems) return;
+  const pool = shuffle([...SHOP_POOL]);
+  shopItems = pool.slice(0, SHOP_ROLL_N);
+  shopSelectedIdx = 0;
+  renderShop();
+  document.getElementById('shop-modal').hidden = false;
+}
+
+function renderShop() {
+  document.getElementById('shop-gold').textContent = player.gold;
+  const html = shopItems.map((item, i) => {
+    const existing = player.equip[item.slot];
+    const sellBack = existing ? Math.floor(existing.price / 2) : 0;
+    const net = item.price - sellBack;
+    const afford = player.gold >= net;
+    const mods = [];
+    if (item.mod.hp)  mods.push(`HP+${item.mod.hp}`);
+    if (item.mod.atk) mods.push(`ATK+${item.mod.atk}`);
+    if (item.mod.rec) mods.push(`REC+${item.mod.rec}`);
+    if (item.mod.agi) mods.push(`AGI+${item.mod.agi}`);
+    if (item.bonus) {
+      for (const [race, m] of Object.entries(item.bonus)) mods.push(`vs${FACTIONS[race].name}x${m}`);
+    }
+    const sellText = existing ? ` (${existing.name}を${sellBack}Gで買取)` : '';
+    const kbSel = i === shopSelectedIdx ? ' kb-selected' : '';
+    return `<div class="shop-item${afford ? '' : ' cant-afford'}${kbSel}" ${afford ? `onclick="buyItem(${i})"` : ''}>
+      <div>
+        <div><span class="shop-slot">[${item.slot}]</span> ${item.name}</div>
+        <div class="shop-effect">${mods.join(' / ')}${sellText}</div>
+      </div>
+      <div class="shop-price">${item.price}G${sellBack ? ` → 実質${net}G` : ''}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('shop-items').innerHTML = html;
+}
+
+function buyItem(idx) {
+  const item = shopItems[idx];
+  if (!item) return;
+  const existing = player.equip[item.slot];
+  const sellBack = existing ? Math.floor(existing.price / 2) : 0;
+  const net = item.price - sellBack;
+  if (player.gold < net) return;
+  player.gold -= net;
+  player.equip[item.slot] = item;
+  // Cap current HP to new max
+  const s = playerStats();
+  if (player.hp > s.hp) player.hp = s.hp;
+  closeShop();
+  processWorldTurn();
+  afterWorldTurn();
+}
+
+function closeShop() {
+  shopItems = null;
+  document.getElementById('shop-modal').hidden = true;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// WIN / LOSS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function checkWinLoss() {
+  if (gameEnded) return false;
+  const humanCr   = crystals.filter(c => c.owner === 'human').length;
+  const monsterCr = crystals.filter(c => ['goblin','lizard','ogre'].includes(c.owner)).length;
+  if (humanCr === 0) { showResult('lose', '人間族のクリスタルが全て失われました'); return true; }
+  if (monsterCr === 0) { showResult('win', '全てのモンスタークリスタルを封印！'); return true; }
+  return false;
+}
+
+function showResult(kind, detail) {
+  gameEnded = true;
+  const title = document.getElementById('result-title');
+  title.textContent = kind === 'win' ? '🎉 VICTORY' : '💀 DEFEAT';
+  title.className = 'result-title ' + (kind === 'win' ? 'result-win' : 'result-lose');
+  document.getElementById('result-detail').textContent = `${detail}（ ${turn} ターン）`;
+  document.getElementById('result-screen').hidden = false;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// RENDERING
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildMazeImage() {
+  const oc = document.createElement('canvas');
+  oc.width = CANVAS_SIZE; oc.height = CANVAS_SIZE;
+  const mc = oc.getContext('2d');
+  for (const [, fdata] of Object.entries(FACTIONS)) {
+    if (!fdata.zone) continue;
+    const [r1, r2, c1, c2] = fdata.zone;
+    mc.fillStyle = fdata.color + '14';
+    mc.fillRect(c1 * CELL, r1 * CELL, (c2 - c1 + 1) * CELL, (r2 - r1 + 1) * CELL);
+  }
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < GRID; c++) {
+      mc.fillStyle = grid[r][c] === 1 ? '#141414' : '#303040';
+      mc.fillRect(c * CELL, r * CELL, CELL, CELL);
+    }
+  }
+  mazeImg = oc;
+}
+
+function updateCamera() {
+  // プレイヤーを常にビューポートの中央に固定（クランプなし）
+  camR = player.r - Math.floor(VIEW_CELLS / 2);
+  camC = player.c - Math.floor(VIEW_CELLS / 2);
+}
+
+// グリッド座標 → スクリーン座標（カメラオフセット適用）
+function toScreen(r, c) {
+  return { x: (c - camC) * CELL, y: (r - camR) * CELL };
+}
+
+// スクリーン座標がビューポート内か
+function inView(sx, sy) {
+  return sx > -CELL && sx < CANVAS_VIEW && sy > -CELL && sy < CANVAS_VIEW;
+}
+
+function render() {
+  updateCamera();
+
+  // マップ外は壁色で塗りつぶし（プレイヤー中央固定のためクランプなし）
+  ctx.fillStyle = '#141414';
+  ctx.fillRect(0, 0, CANVAS_VIEW, CANVAS_VIEW);
+
+  // 有効なマップ範囲のみ迷路画像から切り出して描画
+  const srcC = Math.max(0, camC);
+  const srcR = Math.max(0, camR);
+  const srcW = Math.min(GRID, camC + VIEW_CELLS) - srcC;
+  const srcH = Math.min(GRID, camR + VIEW_CELLS) - srcR;
+  if (srcW > 0 && srcH > 0) {
+    ctx.drawImage(mazeImg,
+      srcC * CELL, srcR * CELL, srcW * CELL, srcH * CELL,
+      (srcC - camC) * CELL, (srcR - camR) * CELL, srcW * CELL, srcH * CELL
+    );
+  }
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Crystals
+  for (const cr of crystals) {
+    const { x: sx, y: sy } = toScreen(cr.r, cr.c);
+    if (!inView(sx, sy)) continue;
+    const x = sx + CELL / 2, y = sy + CELL / 2;
+    const color = FACTIONS[cr.owner].color;
+    ctx.beginPath();
+    ctx.arc(x, y, CELL / 2 - 1, 0, Math.PI * 2);
+    ctx.fillStyle   = cr.owner === 'neutral' ? '#252530' : color + '33';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+    ctx.font = `${Math.round(CELL * 0.7)}px sans-serif`;
+    ctx.fillStyle = cr.owner === 'neutral' ? '#555' : '#ddd';
+    ctx.fillText('💎', x, y);
+  }
+
+  // Units（同セルグループ化）
+  const cellMap = new Map();
+  for (const u of units) {
+    const k = u.r * GRID + u.c;
+    if (!cellMap.has(k)) cellMap.set(k, []);
+    cellMap.get(k).push(u);
+  }
+  for (const [k, group] of cellMap) {
+    const r = Math.floor(k / GRID);
+    const c = k % GRID;
+    const { x: sx, y: sy } = toScreen(r, c);
+    if (!inView(sx, sy)) continue;
+    const x = sx + CELL / 2, y = sy + CELL / 2;
+
+    if (group.some(u => u.inCombat)) {
+      ctx.fillStyle = 'rgba(255, 60, 0, 0.45)';
+      ctx.fillRect(sx, sy, CELL, CELL);
+    }
+    const u0 = group[0];
+    const hp = u0.hp / u0.maxHp;
+    ctx.fillStyle = '#111';
+    ctx.fillRect(sx, sy, CELL, 3);
+    ctx.fillStyle = hp > 0.5 ? '#4f4' : hp > 0.25 ? '#ff4' : '#f44';
+    ctx.fillRect(sx, sy, CELL * hp, 3);
+    ctx.font = `${Math.round(CELL * 0.75)}px sans-serif`;
+    ctx.fillText(u0.emoji, x, y + 1);
+    if (group.length > 1) {
+      ctx.font = `bold ${Math.round(CELL * 0.5)}px monospace`;
+      ctx.fillStyle = '#fff';
+      ctx.fillText(group.length, x + CELL * 0.25, y + CELL * 0.25);
+    }
+  }
+
+  // Player
+  if (player) {
+    const { x: sx, y: sy } = toScreen(player.r, player.c);
+    const x = sx + CELL / 2, y = sy + CELL / 2;
+    ctx.beginPath();
+    ctx.arc(x, y, CELL / 2 + 2, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ffeb3b';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    const s = playerStats();
+    const hp = player.hp / s.hp;
+    ctx.fillStyle = '#111';
+    ctx.fillRect(sx, sy, CELL, 3);
+    ctx.fillStyle = hp > 0.5 ? '#4f4' : hp > 0.25 ? '#ff4' : '#f44';
+    ctx.fillRect(sx, sy, CELL * Math.max(0, hp), 3);
+    ctx.font = `${Math.round(CELL * 0.85)}px sans-serif`;
+    ctx.fillText('🤖', x, y + 1);
+  }
+}
+
+function updateSidebar() {
+  document.getElementById('turn-display').textContent = `⏱ TURN ${turn}`;
+
+  const s = playerStats();
+  const curHp = Math.max(0, Math.ceil(player.hp));
+  const pct = s.hp > 0 ? curHp / s.hp : 0;
+  document.getElementById('p-hp').textContent = `${curHp} / ${s.hp}`;
+  const bar = document.getElementById('hp-bar');
+  bar.style.width = `${Math.round(pct * 100)}%`;
+  bar.style.background = pct > 0.5 ? '#33cc55' : pct > 0.25 ? '#ddaa00' : '#cc2233';
+
+  document.getElementById('p-atk').textContent = s.atk;
+  document.getElementById('p-rec').textContent = s.rec;
+  document.getElementById('p-agi').textContent = s.agi;
+  document.getElementById('p-gold').textContent = player.gold;
+
+  for (const [slot, icon] of [['weapon','eq-weapon'],['armor','eq-armor'],['accessory','eq-accessory']]) {
+    const el = document.getElementById(icon);
+    const name = player.equip[slot]?.name;
+    el.textContent = name || '未装備';
+    el.className = 'equip-name' + (name ? '' : ' empty');
+  }
+
+  const cc = { human: 0, goblin: 0, lizard: 0, ogre: 0 };
+  const uc = { human: 0, goblin: 0, lizard: 0, ogre: 0 };
+  for (const cr of crystals) if (cr.owner in cc) cc[cr.owner]++;
+  for (const u  of units)    if (u.faction in uc) uc[u.faction]++;
+  const BAR_MAX = UNIT_CAP_MAX;
+
+  const html = ['human','goblin','lizard','ogre'].map(f => {
+    const d = FACTIONS[f];
+    const uPct = Math.min(100, Math.round(uc[f] / BAR_MAX * 100));
+    return `<div class="faction-entry">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+        <span class="faction-name" style="color:${d.color};min-width:62px;">${d.name}</span>
+        <span class="faction-crystal" style="color:${d.color};min-width:36px;">💎${cc[f]}</span>
+        <span class="faction-unit" style="min-width:30px;">⚔️${uc[f]}</span>
+        <div class="faction-bar-bg" style="flex:1;">
+          <div class="faction-bar-fill" style="width:${uPct}%;background:${d.color}"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('faction-display').innerHTML = html;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// INPUT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+document.addEventListener('keydown', e => {
+  if (gameEnded) {
+    if (e.key === 'Enter') { e.preventDefault(); restartGame(); }
+    return;
+  }
+
+  // ── 戦闘中 ──────────────────────────────────────
+  if (battleState) {
+    const liveIdx = battleState.enemies
+      .map((en, i) => en.hp > 0 ? i : -1).filter(i => i >= 0);
+    switch (e.key) {
+      case 'ArrowUp': case 'w': case 'W': {
+        if (liveIdx.length === 0) break;
+        const pos = liveIdx.indexOf(battleState.selectedTarget);
+        battleState.selectedTarget = liveIdx[pos <= 0 ? liveIdx.length - 1 : pos - 1];
+        renderBattle();
+        break;
+      }
+      case 'ArrowDown': case 's': case 'S': {
+        if (liveIdx.length === 0) break;
+        const pos = liveIdx.indexOf(battleState.selectedTarget);
+        battleState.selectedTarget = liveIdx[pos < 0 || pos >= liveIdx.length - 1 ? 0 : pos + 1];
+        renderBattle();
+        break;
+      }
+      case 'ArrowLeft': case 'a': case 'A':
+        battleState.selectedCommand = 0; renderBattle(); break;
+      case 'ArrowRight': case 'd': case 'D':
+        battleState.selectedCommand = 1; renderBattle(); break;
+      case 'Enter':
+        if (battleState.selectedCommand === 0) {
+          if (battleState.selectedTarget !== null) battleAttack(battleState.selectedTarget);
+        } else {
+          battleFlee();
+        }
+        break;
+      default: return;
+    }
+    e.preventDefault();
+    return;
+  }
+
+  // ── ショップ中 ──────────────────────────────────
+  if (shopItems) {
+    switch (e.key) {
+      case 'ArrowUp': case 'w': case 'W':
+        shopSelectedIdx = Math.max(0, shopSelectedIdx - 1);
+        renderShop(); break;
+      case 'ArrowDown': case 's': case 'S':
+        shopSelectedIdx = Math.min(shopItems.length - 1, shopSelectedIdx + 1);
+        renderShop(); break;
+      case 'Enter':
+        buyItem(shopSelectedIdx); break;
+      case 'Escape':
+        closeShop(); break;
+      default: return;
+    }
+    e.preventDefault();
+    return;
+  }
+
+  // ── クリスタル上 ────────────────────────────────
+  if (onCrystal) {
+    if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); healAtCrystal(); return; }
+    if (e.key === 'e' || e.key === 'E') { e.preventDefault(); openShop(); return; }
+  }
+
+  // ── マップ移動 ──────────────────────────────────
+  let dr = 0, dc = 0;
+  switch (e.key) {
+    case 'ArrowUp':    case 'w': case 'W': dr = -1; break;
+    case 'ArrowDown':  case 's': case 'S': dr =  1; break;
+    case 'ArrowLeft':  case 'a': case 'A': dc = -1; break;
+    case 'ArrowRight': case 'd': case 'D': dc =  1; break;
+    default: return;
+  }
+  e.preventDefault();
+  tryMovePlayer(dr, dc);
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// INIT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function restartGame() {
+  gameEnded = false;
+  battleState = null;
+  shopItems = null;
+  turn = 0;
+  humanAutoSpawnIndex = 0;
+  units = [];
+  document.getElementById('battle-modal').hidden = true;
+  document.getElementById('shop-modal').hidden = true;
+  document.getElementById('result-screen').hidden = true;
+
+  grid = generateMaze(GRID);
+  initCrystals();
+  buildMazeImage();
+
+  player = createPlayer();
+  spawnPlayerAtHome();
+  camR = 0; camC = 0;
+
+  updateOnCrystal();
+  render();
+  updateSidebar();
+}
+
+restartGame();
+</script>
+</body>
+</html>

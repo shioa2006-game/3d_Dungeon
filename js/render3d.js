@@ -175,10 +175,13 @@ function drawSprites() {
       const img    = imgs[dir];
       if (!img || !img.complete || img.naturalWidth === 0) continue;
 
-      const spriteH    = clamp(WALL_HEIGHT_CONST / corrDist, 0, R.h * 2);
+      const scale      = UNIT_DEFS[m.type]?.sizeScale ?? 1.0;
+      const wallH      = WALL_HEIGHT_CONST / corrDist;
+      const floorY     = R.h / 2 + wallH / 2;
+      const spriteH    = clamp(wallH * scale, 0, R.h * 2);
       const spriteW    = spriteH * (img.naturalWidth / img.naturalHeight);
       const spriteLeft = screenXCent - spriteW / 2;
-      const spriteTop  = R.h / 2 - spriteH / 2;
+      const spriteTop  = floorY - spriteH;
 
       const colStart = Math.max(0,             Math.floor(spriteLeft / colW));
       const colEnd   = Math.min(RAY_COUNT - 1, Math.ceil((spriteLeft + spriteW) / colW));

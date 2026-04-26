@@ -73,12 +73,12 @@ const UNIT_CAP_PER_CRYSTAL = 5;
 // Unit definitions（playtest.html と同値）
 // =====================
 const UNIT_DEFS = {
-  human:  { hp: 35, atk: 5, faction: 'human'  },
-  elf:    { hp: 30, atk: 6, faction: 'human'  },
-  dwarf:  { hp: 40, atk: 4, faction: 'human'  },
-  goblin: { hp: 28, atk: 5, faction: 'goblin' },
-  lizard: { hp: 28, atk: 7, faction: 'lizard' },
-  ogre:   { hp: 52, atk: 6, faction: 'ogre'   },
+  human:  { hp: 35, atk: 5, faction: 'human',  sizeScale: 1.00 },
+  elf:    { hp: 30, atk: 6, faction: 'human',  sizeScale: 1.00 },
+  dwarf:  { hp: 40, atk: 4, faction: 'human',  sizeScale: 0.85 },
+  goblin: { hp: 28, atk: 5, faction: 'goblin', sizeScale: 0.65 },
+  lizard: { hp: 28, atk: 7, faction: 'lizard', sizeScale: 1.00 },
+  ogre:   { hp: 52, atk: 6, faction: 'ogre',   sizeScale: 1.35 },
 };
 
 const AI_UNIT          = { goblin: 'goblin', lizard: 'lizard', ogre: 'ogre' };

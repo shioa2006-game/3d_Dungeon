@@ -65,6 +65,7 @@ function gameLoop() {
   drawMinimap();
   drawUIRight();
   drawUIBottom();
+  drawFullMap();
 
   keysJustPressed.clear();
   requestAnimationFrame(gameLoop);

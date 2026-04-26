@@ -7,6 +7,8 @@ window.addEventListener('keydown', e => {
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code))
     e.preventDefault();
   if (e.code === 'KeyR') newMaze();
+  if (e.code === 'KeyM') toggleFullMap();
+  if (e.code === 'Escape' && fullMapOpen) toggleFullMap();
 });
 
 window.addEventListener('keyup', e => { keys[e.code] = false; });

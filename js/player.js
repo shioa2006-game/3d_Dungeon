@@ -108,6 +108,20 @@ function startMove(dir) {
   if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) return;
   if (grid[nr][nc] !== 0) return;
 
+  // 移動先に敵がいれば通過せずその場でバトル開始
+  if (!battleState) {
+    const contact = monsters.find(m =>
+      m.hp > 0 && !m.battleLocked &&
+      m.gridR === nr && m.gridC === nc &&
+      m.faction !== 'human'
+    );
+    if (contact) {
+      triggerMonsterTurn(player.gridR, player.gridC, true); // 即時・バンプ扱い
+      startBattle(contact);
+      return;
+    }
+  }
+
   player.moving       = true;
   player.moveFrom     = new Vec2(player.pos.x, player.pos.y);
   player.moveTo       = new Vec2((nc + 0.5) * CELL_SIZE, (nr + 0.5) * CELL_SIZE);
@@ -115,7 +129,7 @@ function startMove(dir) {
   player.nextGridR    = nr;
   player.nextGridC    = nc;
 
-  triggerMonsterTurn(nr, nc);
+  triggerMonsterTurn(nr, nc); // 通常移動：アニメーション付き
 }
 
 function startRotate(dir) {

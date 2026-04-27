@@ -215,10 +215,10 @@ function battleAttack(targetIdx) {
     return;
   }
 
-  // 次ターゲット自動選択 → アニメーション完了後に renderBattle()
+  // 次ターゲット自動選択 → 即時再描画
   const nextIdx = battleState.enemies.findIndex(e => e.hp > 0);
   battleState.selectedTarget = nextIdx >= 0 ? nextIdx : null;
-  battleNeedsRerender = true;
+  if (battleState) renderBattle();
 }
 
 // =====================
@@ -241,7 +241,7 @@ function battleFlee() {
       endBattle('dead');
       return;
     }
-    battleNeedsRerender = true;
+    if (battleState) renderBattle();
   }
 }
 
@@ -276,7 +276,7 @@ function _enemyBattleTurn() {
 // バトル中のワールドターン（Q3b: アニメーション付き）
 // =====================
 function _worldTurnForBattle() {
-  triggerMonsterTurn(player.gridR, player.gridC);
+  triggerMonsterTurn(player.gridR, player.gridC, true); // Q3(a): 即時処理
 }
 
 // =====================

@@ -269,7 +269,7 @@ function pickTerritoryMoveTurn(m, reserved) {
 // =====================
 // メインターン処理
 // =====================
-function triggerMonsterTurn(pDestR, pDestC) {
+function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
   worldTurn++;
   const pGR = player.gridR;
   const pGC = player.gridC;
@@ -321,17 +321,30 @@ function triggerMonsterTurn(pDestR, pDestC) {
     }
   }
 
-  // ⑤ アニメーション開始
-  let anyMoving = false;
-  for (const m of monsters) {
-    if (m.targetR < 0) continue;
-    m.moveFrom     = new Vec2(m.pos.x, m.pos.y);
-    m.moveTo       = new Vec2((m.targetC + 0.5) * CELL_SIZE, (m.targetR + 0.5) * CELL_SIZE);
-    m.moveProgress = 0;
-    m.moving       = true;
-    anyMoving      = true;
+  // ⑤ 移動適用（即時 or アニメーション）
+  if (skipAnimation) {
+    for (const m of monsters) {
+      if (m.targetR < 0) continue;
+      m.facing  = facingFromMove(m.gridR, m.gridC, m.targetR, m.targetC);
+      m.gridR   = m.targetR;  m.gridC   = m.targetC;
+      m.pos.x   = (m.targetC + 0.5) * CELL_SIZE;
+      m.pos.y   = (m.targetR + 0.5) * CELL_SIZE;
+      m.targetR = -1;         m.targetC = -1;
+      m.moving  = false;
+    }
+    monstersAnimating = false;
+  } else {
+    let anyMoving = false;
+    for (const m of monsters) {
+      if (m.targetR < 0) continue;
+      m.moveFrom     = new Vec2(m.pos.x, m.pos.y);
+      m.moveTo       = new Vec2((m.targetC + 0.5) * CELL_SIZE, (m.targetR + 0.5) * CELL_SIZE);
+      m.moveProgress = 0;
+      m.moving       = true;
+      anyMoving      = true;
+    }
+    monstersAnimating = anyMoving;
   }
-  monstersAnimating = anyMoving;
 
   // ⑥ クリスタルスポーンタイマー
   updateCrystals();

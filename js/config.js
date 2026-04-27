@@ -152,3 +152,36 @@ function wallTextureU(segA, segB, u01) {
 }
 
 function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+// =====================
+// プレイヤー定数
+// =====================
+const PLAYER_INIT = { hp: 40, atk: 7, rec: 5, agi: 10 };
+const FLEE_BASE   = 0.5;
+function goldDrop() { return 10 + Math.floor(Math.random() * 11); }
+
+const UNIT_NAMES = {
+  human: '兵士', elf: 'エルフ', dwarf: 'ドワーフ',
+  goblin: 'ゴブリン', lizard: 'リザード', ogre: 'オーガ',
+};
+
+// =====================
+// Shop pool（playtest.html より移植）
+// =====================
+const SHOP_POOL = [
+  { slot: 'weapon', name: '鉄の剣',             price: 30,  mod: { atk: 2 } },
+  { slot: 'weapon', name: '鋼の剣',             price: 90,  mod: { atk: 4 } },
+  { slot: 'weapon', name: 'ミスリル剣',         price: 200, mod: { atk: 7 } },
+  { slot: 'weapon', name: 'ゴブリン特攻の剣',   price: 70,  mod: { atk: 2 }, bonus: { goblin: 1.8 } },
+  { slot: 'weapon', name: 'リザード特攻の槍',   price: 70,  mod: { atk: 2 }, bonus: { lizard: 1.8 } },
+  { slot: 'weapon', name: 'オーガ特攻の大剣',   price: 70,  mod: { atk: 2 }, bonus: { ogre:   1.8 } },
+  { slot: 'armor',  name: '革の鎧',             price: 30,  mod: { hp: 8 } },
+  { slot: 'armor',  name: '鎖帷子',             price: 80,  mod: { hp: 18 } },
+  { slot: 'armor',  name: '板金鎧',             price: 180, mod: { hp: 35 } },
+  { slot: 'accessory', name: '治癒の指輪',       price: 40,  mod: { rec: 3 } },
+  { slot: 'accessory', name: '大治癒の指輪',     price: 120, mod: { rec: 8 } },
+  { slot: 'accessory', name: '疾風のブーツ',     price: 50,  mod: { agi: 10 } },
+  { slot: 'accessory', name: '駿足のブーツ',     price: 130, mod: { agi: 25 } },
+  { slot: 'accessory', name: '力のブレスレット', price: 60,  mod: { atk: 1 } },
+];
+const SHOP_ROLL_N = 5;

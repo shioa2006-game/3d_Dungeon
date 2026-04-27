@@ -190,18 +190,36 @@ function drawFullMap() {
     }
   }
 
-  // クリスタル
+  // クリスタル（三角形）
   for (const cr of crystals) {
     const sx = mapX0 + (cr.c + 0.5) * cellDraw;
     const sy = mapY0 + (cr.r + 0.5) * cellDraw;
     const f  = FACTIONS[cr.owner];
+    const r  = 4.5;
+
+    // 外縁（黒枠）
     ctx.beginPath();
-    ctx.arc(sx, sy, 3.5, 0, Math.PI * 2);
+    ctx.moveTo(sx,               sy - (r + 1.2));
+    ctx.lineTo(sx + (r + 1.2) * 0.866, sy + (r + 1.2) * 0.5);
+    ctx.lineTo(sx - (r + 1.2) * 0.866, sy + (r + 1.2) * 0.5);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fill();
+
+    // 本体（陣営色）
+    ctx.beginPath();
+    ctx.moveTo(sx,           sy - r);
+    ctx.lineTo(sx + r * 0.866, sy + r * 0.5);
+    ctx.lineTo(sx - r * 0.866, sy + r * 0.5);
+    ctx.closePath();
     ctx.fillStyle = f ? f.color : '#888888';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+
+    // 頂点ハイライト
+    ctx.beginPath();
+    ctx.arc(sx, sy - r * 0.5, r * 0.22, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fill();
   }
 
   // ユニット（陣営色の丸）

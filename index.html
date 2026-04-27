@@ -25,6 +25,51 @@
 <div id="game-wrapper">
   <canvas id="c"></canvas>
 
+  <!-- Battle Panel（3Dビュー領域 740×500px に重ねる） -->
+  <div id="battle-panel" hidden>
+    <div id="battle-header">
+      ⚔ 戦闘 — <span id="battle-enemy-name"></span>
+    </div>
+    <div id="battle-main">
+      <div class="battle-side">
+        <div class="battle-side-title">敵</div>
+        <div id="battle-enemy-list"></div>
+      </div>
+      <div class="battle-side">
+        <div class="battle-side-title">味方（人間族）</div>
+        <div id="battle-ally-list"></div>
+      </div>
+    </div>
+    <div id="battle-prompt"></div>
+    <div id="battle-actions">
+      <button class="battle-btn" id="btn-fight">⚔ 戦う</button>
+      <button class="battle-btn" id="btn-flee">🏃 逃げる</button>
+    </div>
+    <div id="battle-log"></div>
+  </div>
+
+  <!-- Shop Modal -->
+  <div id="shop-modal" hidden>
+    <div class="shop-modal-inner">
+      <div class="shop-modal-title">
+        🛒 ショップ &nbsp;
+        <span style="color:#ffaa44;font-weight:normal">所持GOLD: <span id="shop-gold">0</span></span>
+      </div>
+      <div class="shop-modal-note">※ 既存装備は半値で自動買取。購入で1ターン消費。</div>
+      <div id="shop-items"></div>
+      <button class="shop-close-btn" onclick="closeShop()">閉じる（ターン消費なし）[Esc]</button>
+    </div>
+  </div>
+
+  <!-- Result Screen -->
+  <div id="result-screen" hidden>
+    <div class="result-inner">
+      <div class="result-title" id="result-title"></div>
+      <div class="result-detail" id="result-detail"></div>
+      <button class="result-restart-btn" onclick="newMaze()">🔄 もう一度プレイ [R]</button>
+    </div>
+  </div>
+
 </div>
 <script src="js/config.js"></script>
 <script src="js/sprites.js"></script>

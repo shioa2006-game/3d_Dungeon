@@ -131,25 +131,33 @@ function drawCrystalsOnMinimap() {
     if (gx < 0 || gx > MINIMAP_VIEW_CELLS ||
         gy < 0 || gy > MINIMAP_VIEW_CELLS) continue;
 
-    const sx = mapX0 + gx * cellDraw;
-    const sy = mapY0 + gy * cellDraw;
-    const f  = FACTIONS[cr.owner];
-    const dotR = cellDraw * 0.32;
+    const sx   = mapX0 + gx * cellDraw;
+    const sy   = mapY0 + gy * cellDraw;
+    const f    = FACTIONS[cr.owner];
+    const r    = cellDraw * 0.30;
 
-    // 外縁（黒枠）
+    // 外縁（黒枠・三角形）
     ctx.beginPath();
-    ctx.arc(sx, sy, dotR + 1.2, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.moveTo(sx,               sy - (r + 1.5));
+    ctx.lineTo(sx + (r + 1.5) * 0.866, sy + (r + 1.5) * 0.5);
+    ctx.lineTo(sx - (r + 1.5) * 0.866, sy + (r + 1.5) * 0.5);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
     ctx.fill();
-    // 本体（陣営色）
+
+    // 本体（陣営色・三角形）
     ctx.beginPath();
-    ctx.arc(sx, sy, dotR, 0, Math.PI * 2);
+    ctx.moveTo(sx,           sy - r);
+    ctx.lineTo(sx + r * 0.866, sy + r * 0.5);
+    ctx.lineTo(sx - r * 0.866, sy + r * 0.5);
+    ctx.closePath();
     ctx.fillStyle = f ? f.color : '#888888';
     ctx.fill();
-    // ハイライト
+
+    // 頂点ハイライト
     ctx.beginPath();
-    ctx.arc(sx - dotR * 0.3, sy - dotR * 0.3, dotR * 0.35, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.arc(sx, sy - r * 0.55, r * 0.22, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.fill();
   }
 }

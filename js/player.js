@@ -19,6 +19,10 @@ const player = {
   angleTo:       0,
   rotProgress:   0,
   pendingFacing: 1,
+
+  hp:    PLAYER_INIT.hp,
+  gold:  0,
+  equip: { weapon: null, armor: null, accessory: null },
 };
 
 let explored = [];
@@ -40,6 +44,61 @@ function markExplored() {
       if (grid[nr][nc] === 1) break;
     }
   }
+}
+
+function initPlayerStats() {
+  player.hp   = PLAYER_INIT.hp;
+  player.gold = 0;
+  player.equip = { weapon: null, armor: null, accessory: null };
+}
+
+function playerStats() {
+  let s = { hp: PLAYER_INIT.hp, atk: PLAYER_INIT.atk, rec: PLAYER_INIT.rec, agi: PLAYER_INIT.agi };
+  for (const slot of ['weapon', 'armor', 'accessory']) {
+    const eq = player.equip[slot];
+    if (!eq?.mod) continue;
+    if (eq.mod.hp)  s.hp  += eq.mod.hp;
+    if (eq.mod.atk) s.atk += eq.mod.atk;
+    if (eq.mod.rec) s.rec += eq.mod.rec;
+    if (eq.mod.agi) s.agi += eq.mod.agi;
+  }
+  return s;
+}
+
+function playerAtkVs(raceOrType) {
+  const { atk } = playerStats();
+  const w = player.equip.weapon;
+  if (w?.bonus?.[raceOrType]) return Math.max(1, Math.floor(atk * w.bonus[raceOrType]));
+  return atk;
+}
+
+function spawnPlayerAtHome() {
+  let best = null, bestDist = Infinity;
+  for (const cr of crystals) {
+    if (cr.owner !== 'human') continue;
+    const d = Math.abs(cr.r - player.gridR) + Math.abs(cr.c - player.gridC);
+    if (d < bestDist) { bestDist = d; best = cr; }
+  }
+  const target = best ?? { r: 1, c: 1 };
+  player.gridR = target.r;
+  player.gridC = target.c;
+  player.pos   = new Vec2((target.c + 0.5) * CELL_SIZE, (target.r + 0.5) * CELL_SIZE);
+  player.moving   = false;
+  player.rotating = false;
+  markExplored();
+  updateOnCrystal();
+}
+
+function checkCrystalClaim() {
+  const cr = crystals.find(c =>
+    c.r === player.gridR && c.c === player.gridC && c.owner !== 'human'
+  );
+  if (!cr) return;
+  cr.owner      = 'human';
+  cr.spawnTimer = 0;
+  updateOnCrystal();
+  logMessage(`💎 クリスタルを人間族に転換！`);
+  checkWinLoss();
 }
 
 function startMove(dir) {
@@ -78,7 +137,9 @@ function updatePlayer() {
       player.pos.x   = player.moveTo.x;
       player.pos.y   = player.moveTo.y;
       markExplored();
+      updateOnCrystal();
       checkMonsterContact();
+      if (!battleState) checkCrystalClaim();
     } else {
       const t = smoothstep(player.moveProgress);
       player.pos.x = player.moveFrom.x + (player.moveTo.x - player.moveFrom.x) * t;

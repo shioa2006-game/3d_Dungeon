@@ -68,6 +68,7 @@ function makeUnit(type, r, c) {
     retreatTarget:    null,
     healing:          false,
     pathRefreshTimer: 0,
+    battleLocked:     false,
   };
 }
 
@@ -189,10 +190,15 @@ function updateTerritoryAI(foughtThisTurn) {
         x.r === m.gridR && x.c === m.gridC && x.owner !== m.faction
       );
       if (cr) {
+        const prevOwner = cr.owner;
         cr.owner = m.faction;
         cr.spawnTimer = 0;
         m.path = []; m.pathRefreshTimer = PATH_REFRESH;
         m.targetCrystal = randomEnemyCrystal(m);
+        if (prevOwner === 'human') {
+          logMessage(`💥 人間族クリスタルが${FACTIONS[m.faction].name}に占領された！`);
+          checkWinLoss();
+        }
       }
     }
 
@@ -264,6 +270,7 @@ function pickTerritoryMoveTurn(m, reserved) {
 // メインターン処理
 // =====================
 function triggerMonsterTurn(pDestR, pDestC) {
+  worldTurn++;
   const pGR = player.gridR;
   const pGC = player.gridC;
   const reserved = new Set([`${pDestR},${pDestC}`]);
@@ -277,9 +284,9 @@ function triggerMonsterTurn(pDestR, pDestC) {
   // ② AI vs AI 戦闘（同一セル・異陣営）
   const foughtThisTurn = new Set();
   for (const m of monsters) {
-    if (m.hp <= 0) continue;
+    if (m.hp <= 0 || m.battleLocked) continue;
     for (const e of monsters) {
-      if (e === m || e.hp <= 0 || e.faction === m.faction) continue;
+      if (e === m || e.hp <= 0 || e.faction === m.faction || e.battleLocked) continue;
       if (e.gridR !== m.gridR || e.gridC !== m.gridC) continue;
       e.hp -= m.atk * getAffinityMult(m.type, e.type);
       foughtThisTurn.add(m);
@@ -294,6 +301,10 @@ function triggerMonsterTurn(pDestR, pDestC) {
 
   // ④ 移動先を決定
   for (const m of monsters) {
+    if (m.battleLocked) {
+      reserved.add(`${m.gridR},${m.gridC}`);
+      continue;
+    }
     let target = null;
     if (foughtThisTurn.has(m)) {
       target = null;   // 戦闘ターンは移動しない
@@ -362,9 +373,13 @@ function animateMonsters() {
 // プレイヤー接触チェック（Phase 6 でバトル画面へ）
 // =====================
 function checkMonsterContact() {
+  if (battleState) return;
   for (const m of monsters) {
-    if (m.gridR === player.gridR && m.gridC === player.gridC) {
-      // TODO: Phase 6 で startBattle(m) を呼び出す
+    if (m.hp > 0 && !m.battleLocked &&
+        m.gridR === player.gridR && m.gridC === player.gridC &&
+        m.faction !== 'human') {
+      startBattle(m);
+      return;
     }
   }
 }

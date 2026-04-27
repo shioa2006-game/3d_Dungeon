@@ -22,9 +22,21 @@ addLoops(grid, LOOP_COUNT, GRID_SIZE);
 let walls = gridToWalls(grid);
 
 // =====================
-// 新規迷路生成（R キーで呼び出し）
+// 新規迷路生成 / リスタート（R キー・リスタートボタンで呼び出し）
 // =====================
 function newMaze() {
+  // 全モーダルを閉じる
+  gameEnded           = false;
+  battleState         = null;
+  battleNeedsRerender = false;
+  shopItems           = null;
+  onCrystal           = null;
+  worldTurn           = 0;
+  messageLog.length   = 0;
+  document.getElementById('battle-panel').hidden = true;
+  document.getElementById('shop-modal').hidden   = true;
+  document.getElementById('result-screen').hidden = true;
+
   grid  = generateMaze(GRID_SIZE);
   addLoops(grid, LOOP_COUNT, GRID_SIZE);
   walls = gridToWalls(grid);
@@ -38,6 +50,9 @@ function newMaze() {
   initCrystals();      // spawnMonsters が crystals を参照するため先に実行
   spawnMonsters();
   humanAutoSpawnIndex = 0;
+  initPlayerStats();
+  spawnPlayerAtHome();
+  updateOnCrystal();
 }
 
 // =====================
@@ -46,6 +61,7 @@ function newMaze() {
 initExplored();
 initCrystals();
 spawnMonsters();
+initPlayerStats();
 
 // =====================
 // Game loop
@@ -58,10 +74,18 @@ function gameLoop() {
   updatePlayer();
   animateMonsters();
 
-  const hits = castRays();
-  drawView3D(hits);
-  drawCompass();
-  drawSprites();
+  // Q3b: アニメーション完了後にバトル画面を再描画
+  if (battleNeedsRerender && !monstersAnimating) {
+    battleNeedsRerender = false;
+    if (battleState) renderBattle();
+  }
+
+  if (!battleState) {
+    const hits = castRays();
+    drawView3D(hits);
+    drawCompass();
+    drawSprites();
+  }
   drawMinimap();
   drawUIRight();
   drawUIBottom();

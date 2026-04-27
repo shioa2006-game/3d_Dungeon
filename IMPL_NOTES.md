@@ -177,7 +177,7 @@ const PALETTE_GOBLIN = { 1:'#2d2d2d', 2:'#6abf4b', 3:'#4a8f30', 4:'#fff' };
 
 ## 4. Phase 6 戦闘シーン実装方針
 
-**ラベル：[Phase6開始前]** | 議論日：2026-04-20 | 起点：Phase 5実装時
+**ラベル：[Phase6開始前]** | 議論日：2026-04-27 | 起点：Phase 5実装時
 
 ### 課題
 
@@ -186,7 +186,35 @@ Phase 6 開始前によく検討する。
 
 ### 決定事項
 
-未議論
+**バトル形式**
+- playtest.html のバトル方式をそのまま移植する（ターン制、戦う/逃げる の2択コマンド）
+- 参加ユニット
+  - 敵側：接触した1体 ＋ 同種族で接触セルから隣接8マス以内（最大5体）
+  - 味方側：プレイヤー ＋ 人間族AIでプレイヤーから隣接8マス以内（最大4体、計5体）
+
+**プレイヤーステータス**
+- Phase 6 で HP/ATK/REC/AGI/GOLD をすべて `player` オブジェクトに追加する
+- playtest.html の初期値・計算式をそのまま流用
+- 装備スロット（weapon/armor/accessory）は Phase 7 で追加
+
+**世界時間の進行**
+- バトル中も `processWorldTurn()` を毎ターン呼び出す（playtest.html と同様）
+- `battleLocked` フラグでバトル参加中ユニットの移動を停止
+- ワールドターン中に新たなユニットが隣接エリアに来た場合、バトルに追加参戦する
+  （敵・味方ともに上限5体を超えない範囲で）
+
+**バトルUI**
+- バトル中は 3D ビュー領域をバトル UI に切り替える（右パネル・ミニマップは維持）
+- `M` キーによる全体マップはバトル中も使用可能
+- キー操作：バトル中は3D移動キーをバトルコマンドに転用
+  - ↑↓でターゲット選択、←→でコマンド切替、Enter で実行
+
+**実装ファイル（予定）**
+- `js/battle.js`：startBattle / renderBattle / battleAttack / battleFlee / enemyBattleTurn / endBattle
+- `js/player.js`：player オブジェクトに HP/ATK/REC/AGI/GOLD 追加、playerStats() / playerAtkVs() 実装
+- `js/monsters.js`：checkMonsterContact() を startBattle() 呼び出しに接続
+- `index.html`：バトル用 HTML 追加（3Dビュー領域に切替表示）
+- `css/style.css`：バトル用スタイル追加
 
 ---
 

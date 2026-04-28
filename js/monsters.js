@@ -1,35 +1,6 @@
 let monsters = [];
 let monstersAnimating = false;
 
-// =====================
-// 視野・視線判定
-// =====================
-function isPlayerInFrontHemisphere(m) {
-  const fd  = FACING_DIRS[m.facing];
-  const tpx = player.pos.x - m.pos.x;
-  const tpy = player.pos.y - m.pos.y;
-  return (fd.dc * tpx + fd.dr * tpy) > 0;
-}
-
-function hasLineOfSight(fromPos, toPos) {
-  const dx = toPos.x - fromPos.x, dy = toPos.y - fromPos.y;
-  const dist = Math.hypot(dx, dy);
-  if (dist < 0.001) return true;
-  const invDist = 1 / dist;
-  const rdx = dx * invDist, rdy = dy * invDist;
-  for (const w of walls) {
-    const sx  = w.b.x - w.a.x, sy = w.b.y - w.a.y;
-    const rxs = rdx * sy - rdy * sx;
-    if (rxs > -1e-9 && rxs < 1e-9) continue;
-    const qpx  = w.a.x - fromPos.x, qpy = w.a.y - fromPos.y;
-    const t    = (qpx * sy - qpy * sx) / rxs;
-    if (t < 0 || t >= dist - 1) continue;
-    const u = (qpx * rdy - qpy * rdx) / rxs;
-    if (u >= 0 && u <= 1) return false;
-  }
-  return true;
-}
-
 function facingFromMove(fromR, fromC, toR, toC) {
   const dr = toR - fromR, dc = toC - fromC;
   if (dr === -1) return 0;
@@ -57,11 +28,8 @@ function makeUnit(type, r, c) {
     moveFrom:         new Vec2(pos.x, pos.y),
     moveTo:           new Vec2(pos.x, pos.y),
     moveProgress:     0,
-    state:            'WANDER',
     facing:           2,
     path:             [],
-    lostTimer:        0,
-    alertTimer:       0,
     // 陣営 AI 用フィールド
     targetCrystal:    null,
     retreating:       false,
@@ -113,38 +81,11 @@ function randomEnemyCrystal(m) {
 }
 
 // =====================
-// プレイヤー検知 AI（WANDER ↔ CHASE）
-// =====================
-function updateMonsterAIState(m, pGR, pGC) {
-  const dCells = Math.hypot(m.gridR - pGR, m.gridC - pGC);
-  const inFront = isPlayerInFrontHemisphere(m);
-  const los     = hasLineOfSight(m.pos, player.pos);
-  const canSee  = dCells <= DETECT_RANGE && los && (m.state === 'CHASE' || inFront);
-
-  if (m.state === 'WANDER') {
-    if (canSee) {
-      m.state      = 'CHASE';
-      m.lostTimer  = 0;
-      m.alertTimer = ALERT_DURATION;
-      m.path       = [];
-    }
-  } else {
-    if (canSee) { m.lostTimer = 0; }
-    else        { m.lostTimer++; }
-    if (dCells > LOSE_RANGE || m.lostTimer >= LOSE_TIMER_TURNS) {
-      m.state = 'WANDER';
-      m.path  = [];
-    }
-  }
-}
-
-// =====================
 // 陣営 AI（領土移動・クリスタル奪取・退却・回復）
 // playtest.html の updateUnits() を移植
 // =====================
 function updateTerritoryAI(foughtThisTurn) {
   for (const m of monsters) {
-    if (m.state === 'CHASE') continue;
     if (foughtThisTurn.has(m)) { m.healing = false; continue; }
 
     // ── 回復中 ──
@@ -240,16 +181,6 @@ function pickWanderTargetTurn(m, reserved) {
   return null;
 }
 
-function pickChaseTargetTurn(m, reserved, pGR, pGC) {
-  if (m.path.length === 0)
-    m.path = bfsPath(grid, m.gridR, m.gridC, pGR, pGC);
-  if (m.path.length === 0) return null;
-  const next = m.path[0];
-  if (reserved.has(`${next.r},${next.c}`)) return null;
-  m.path.shift();
-  return { r: next.r, c: next.c };
-}
-
 function pickTerritoryMoveTurn(m, reserved) {
   if (m.healing) return null;   // 回復中は移動しない
 
@@ -271,13 +202,10 @@ function pickTerritoryMoveTurn(m, reserved) {
 // =====================
 function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
   worldTurn++;
-  const pGR = player.gridR;
-  const pGC = player.gridC;
   const reserved = new Set([`${pDestR},${pDestC}`]);
 
-  // ① CHASE / WANDER 状態更新
+  // ① 各ユニットのターゲットをリセット
   for (const m of monsters) {
-    updateMonsterAIState(m, pGR, pGC);
     m.targetR = -1; m.targetC = -1;
   }
 
@@ -306,11 +234,7 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
       continue;
     }
     let target = null;
-    if (foughtThisTurn.has(m)) {
-      target = null;   // 戦闘ターンは移動しない
-    } else if (m.state === 'CHASE') {
-      target = pickChaseTargetTurn(m, reserved, pGR, pGC);
-    } else {
+    if (!foughtThisTurn.has(m)) {
       target = pickTerritoryMoveTurn(m, reserved);
     }
     if (target) {
@@ -376,10 +300,6 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
 // アニメーション更新（毎フレーム）
 // =====================
 function animateMonsters() {
-  for (const m of monsters) {
-    if (m.alertTimer > 0) m.alertTimer--;
-  }
-
   if (!monstersAnimating) return;
 
   let anyStillMoving = false;

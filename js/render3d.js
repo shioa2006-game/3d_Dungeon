@@ -195,23 +195,6 @@ function drawSprites() {
           R.x + col * colW, R.y + spriteTop, colW + 0.5, spriteH);
       }
 
-      if (m.alertTimer > 0) {
-        const alpha    = m.alertTimer > 20 ? 1.0 : m.alertTimer / 20;
-        const bangSize = clamp(spriteH * 0.25, 12, 60);
-        const bangX    = R.x + screenXCent;
-        const bangY    = R.y + spriteTop - bangSize * 0.8;
-        ctx.globalAlpha = alpha;
-        ctx.beginPath();
-        ctx.arc(bangX, bangY, bangSize * 0.55, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgb(255,220,0)'; ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.fillStyle = '#1a1a00';
-        ctx.font = `bold ${Math.floor(bangSize * 0.7)}px monospace`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('!', bangX, bangY);
-        ctx.globalAlpha = 1.0;
-      }
-
     } else {
       // クリスタル
       const cr  = sp.data;

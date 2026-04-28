@@ -35,8 +35,9 @@ function makeUnit(type, r, c) {
     retreating:       false,
     retreatTarget:    null,
     healing:          false,
-    pathRefreshTimer: 0,
-    battleLocked:     false,
+    pathRefreshTimer:   0,
+    targetRefreshTimer: 0,
+    battleLocked:       false,
   };
 }
 
@@ -67,10 +68,23 @@ function nearestFriendlyCrystal(m) {
 function randomEnemyCrystal(m) {
   const candidates = crystals.filter(cr => cr.owner !== m.faction);
   if (candidates.length === 0) return null;
-  // 距離の逆数で重み付けしてランダム選択
-  const weights = candidates.map(cr =>
-    1 / (Math.abs(cr.r - m.gridR) + Math.abs(cr.c - m.gridC) + 1)
-  );
+
+  // 同陣営で各クリスタルを狙っているユニット数を集計（集中ペナルティ用）
+  const targetCount = new Map();
+  for (const other of monsters) {
+    if (other === m || other.faction !== m.faction || !other.targetCrystal) continue;
+    const key = `${other.targetCrystal.r},${other.targetCrystal.c}`;
+    targetCount.set(key, (targetCount.get(key) || 0) + 1);
+  }
+
+  // 距離が近いほど重みが高い + 集中しているクリスタルは二乗ペナルティで重みを下げる
+  // count=0: ×1, count=1: ÷2, count=2: ÷5, count=3: ÷10
+  const weights = candidates.map(cr => {
+    const dist  = Math.abs(cr.r - m.gridR) + Math.abs(cr.c - m.gridC) + 1;
+    const count = targetCount.get(`${cr.r},${cr.c}`) || 0;
+    return (1 / dist) / (1 + count * count);
+  });
+
   const total = weights.reduce((a, b) => a + b, 0);
   let rand = Math.random() * total;
   for (let i = 0; i < candidates.length; i++) {
@@ -136,6 +150,7 @@ function updateTerritoryAI(foughtThisTurn) {
         cr.spawnTimer = 0;
         m.path = []; m.pathRefreshTimer = PATH_REFRESH;
         m.targetCrystal = randomEnemyCrystal(m);
+        m.targetRefreshTimer = 0;
         if (prevOwner === 'human') {
           logMessage(`💥 人間族クリスタルが${FACTIONS[m.faction].name}に占領された！`);
           checkWinLoss();
@@ -146,7 +161,18 @@ function updateTerritoryAI(foughtThisTurn) {
     // ── 目標クリスタルが自陣に変わっていたら再選択 ──
     if (!m.retreating && m.targetCrystal && m.targetCrystal.owner === m.faction) {
       m.targetCrystal = randomEnemyCrystal(m);
+      m.targetRefreshTimer = 0;
       m.path = []; m.pathRefreshTimer = PATH_REFRESH;
+    }
+
+    // ── 定期ターゲット再評価（集中を防ぐ分散制御） ──
+    if (!m.retreating && !m.healing && m.targetCrystal) {
+      m.targetRefreshTimer++;
+      if (m.targetRefreshTimer >= TARGET_RESELECT_INTERVAL) {
+        m.targetRefreshTimer = 0;
+        m.targetCrystal = randomEnemyCrystal(m);
+        m.path = []; m.pathRefreshTimer = PATH_REFRESH;
+      }
     }
 
     // ── BFS パス更新 ──

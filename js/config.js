@@ -37,6 +37,7 @@ const FACING_NAMES  = ['N', 'E', 'S', 'W'];
 
 // Monster AI
 const PATH_REFRESH = 3;   // ターン数ごとに BFS を再計算
+const TARGET_RESELECT_INTERVAL = 15; // ターゲットクリスタルを定期再評価するターン数
 
 // Retro texture
 const RETRO_STEP     = 5;

@@ -177,7 +177,7 @@ const PALETTE_GOBLIN = { 1:'#2d2d2d', 2:'#6abf4b', 3:'#4a8f30', 4:'#fff' };
 
 ## 4. Phase 6 戦闘シーン実装方針
 
-**ラベル：[Phase6開始前]** | 議論日：2026-04-27 | 起点：Phase 5実装時
+**ラベル：[完了]** | 議論日：2026-04-27 | 完了日：2026-04-28 | 起点：Phase 5実装時
 
 ### 課題
 
@@ -215,6 +215,29 @@ Phase 6 開始前によく検討する。
 - `js/monsters.js`：checkMonsterContact() を startBattle() 呼び出しに接続
 - `index.html`：バトル用 HTML 追加（3Dビュー領域に切替表示）
 - `css/style.css`：バトル用スタイル追加
+
+### 実装結果
+
+**計画との差異**
+- **バトルUI配置**：計画「3Dビュー領域を切り替え」→ 実装「Canvas の手前に `position: absolute` で `#battle-panel` をオーバーレイ（`hidden` 属性でトグル）」。Canvas は背面に維持されるため、戦闘中も描画ループは継続する
+- **ワールドターン処理**：計画「`processWorldTurn()` を毎ターン呼び出す」→ 実装「`triggerMonsterTurn(playerGridR, playerGridC, true)` を直接呼び出し（`processWorldTurn` という関数名は存在しない）」
+- **バトル中の追加参戦**：未実装。`startBattle()` 呼び出し時のみ参加者を確定し、その後の追加は行わない
+- **`battleNeedsRerender` フラグ**：変数定義のみで未使用。`renderBattle()` を各アクション末尾で直接呼び出す方式に統一
+
+**追加実装（計画外）**
+- `playerDeath()` / `checkWinLoss()` / `showResult()` を `battle.js` に追加実装
+- `#result-screen`（VICTORY / DEFEAT 終了画面）を `index.html` + `css/style.css` に追加
+- キー操作：`←→` コマンド切替・`↑↓` ターゲット選択・`Enter/Space` 実行を `input.js` に追加（`battleState` 有無で処理分岐）
+- `player.js` の `startMove()` に接触チェック：移動先に敵がいれば `triggerMonsterTurn()` → `startBattle()` を呼び出してバンプ起動
+
+**実装ファイル**
+- `js/battle.js`：`startBattle` / `renderBattle` / `_renderBattleSprites` / `selectBattleTarget` / `battleAttack` / `battleFlee` / `_enemyBattleTurn` / `_worldTurnForBattle` / `endBattle` / `playerDeath` / `checkWinLoss` / `showResult`、ボタンイベント登録
+- `js/player.js`：`player` オブジェクトに `hp` / `gold` / `equip` 追加、`playerStats()` / `playerAtkVs()` / `spawnPlayerAtHome()` 追加、`startMove()` に接触バトル起動ロジック追加
+- `js/config.js`：`PLAYER_INIT = { hp:40, atk:7, rec:5, agi:10 }` / `FLEE_BASE = 0.5` を追加
+- `js/monsters.js`：`battleLocked` フラグを全ユニットに追加、`checkMonsterContact()` を `startBattle()` 呼び出しに接続
+- `js/input.js`：バトルコマンドキー処理（`←→↑↓ Enter/Space`）を追加
+- `index.html`：`#battle-panel`（敵リスト・味方リスト・プロンプト・ボタン・ログ）と `#result-screen` を追加
+- `css/style.css`：`#battle-panel` / `.battle-unit` / `.battle-btn` / `#battle-prompt` / `#battle-log` / `#result-screen` のスタイルを追加
 
 ---
 

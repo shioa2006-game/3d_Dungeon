@@ -153,8 +153,8 @@ function updateTerritoryAI(foughtThisTurn) {
         m.targetRefreshTimer = 0;
         if (prevOwner === 'human') {
           logMessage(`💥 人間族クリスタルが${FACTIONS[m.faction].name}に占領された！`);
-          checkWinLoss();
         }
+        checkWinLoss();
       }
     }
 

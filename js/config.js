@@ -36,11 +36,7 @@ const FACING_ANGLES = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
 const FACING_NAMES  = ['N', 'E', 'S', 'W'];
 
 // Monster AI
-const DETECT_RANGE      = 5;
-const LOSE_RANGE        = 7;
-const LOSE_TIMER_TURNS  = 8;
-const ALERT_DURATION    = 90;
-const PATH_REFRESH      = 3;   // ターン数ごとに BFS を再計算
+const PATH_REFRESH = 3;   // ターン数ごとに BFS を再計算
 
 // Retro texture
 const RETRO_STEP     = 5;

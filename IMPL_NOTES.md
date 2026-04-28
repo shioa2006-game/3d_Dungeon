@@ -283,16 +283,50 @@ Phase 7 では playtest.html の `openShop` / `buyItem` をそのまま移植す
 
 ## 7. 左右視点操作の挙動（回転アニメーション）
 
-**ラベル：[Phase6以降]** | 議論日：2026-04-20 | 起点：Phase 5実装時
+**ラベル：[Phase6以降]** | 議論日：2026-04-28 | 起点：Phase 5実装時
 
 ### 課題
 
 現状は左右キーで瞬時に3Dマップの表示が切り替わる。
 切り替わり途中を描画した方が視覚的により面白くなるのでは？
 
+> **補足（コード調査結果）**
+> 現行コードには `ROT_FRAMES = 6`（≒100ms）のアニメーションがすでに存在する。
+> ただし回転中は次の入力を受け付けないため（`input.js` の `player.rotating` ガード）、
+> 連続回転するとその分だけ入力ラグが累積する。
+
 ### 決定事項
 
-未議論
+**スプリング（慣性）モデルを採用する。**
+
+ゲームロジックの `facing`（衝突・バトル判定などに使用）はキー入力と同時に即時確定し、
+描画専用の `visualAngle` が目標角度に向かってバネのように追従する方式。
+
+```
+// 毎フレーム呼び出し（updatePlayer 内）
+const diff = normalizeAngle(targetAngle - player.visualAngle);
+player.visualAngle += diff * ROT_SPRING_K;  // 例: ROT_SPRING_K = 0.25
+```
+
+**方針の詳細**
+
+- `player.facing` / `player.angle` はこれまで通りキー入力で即時確定（ゲームロジックは変わらない）
+- `player.visualAngle` フィールドを `player` オブジェクトに追加
+- `render3d.js` のレンダリングパスで `player.angle` の代わりに `player.visualAngle` を参照
+- スプライト・敵の可視判定なども `player.visualAngle` に統一
+- 入力ロック（`player.rotating` ガード）は不要になるため除去
+- `ROT_SPRING_K` を定数化し調整可能にする（推奨範囲 0.15〜0.4）
+
+**メリット**
+- 入力ラグゼロ：キビキビした操作感を損なわない
+- レイキャスティングの中間角度を毎フレーム描画 → 慣性のある3D空間の動きが得られる
+- 定数1つで硬さ・柔らかさを自由に調整できる
+
+**実装予定ファイル**
+- `js/config.js`：`ROT_SPRING_K` 定数を追加
+- `js/player.js`：`player.visualAngle` フィールド追加、`updatePlayer()` にスプリング計算を追加、`startRotate()` を単純化（`rotating` フラグ廃止）
+- `js/render3d.js`：角度参照を `player.visualAngle` に変更
+- `js/input.js`：`player.rotating` によるガードを除去
 
 ---
 

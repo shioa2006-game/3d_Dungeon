@@ -321,6 +321,28 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
     }
   }
 
+  // ④-b スワップ衝突検出
+  // A→Bの現在マス、B→Aの現在マス という位置交換を検出し、
+  // 異陣営なら戦闘させて両者の移動をキャンセルする。
+  for (let i = 0; i < monsters.length; i++) {
+    const a = monsters[i];
+    if (a.targetR < 0) continue;
+    for (let j = i + 1; j < monsters.length; j++) {
+      const b = monsters[j];
+      if (b.targetR < 0) continue;
+      if (a.targetR === b.gridR && a.targetC === b.gridC &&
+          b.targetR === a.gridR && b.targetC === a.gridC) {
+        a.targetR = -1; a.targetC = -1;
+        b.targetR = -1; b.targetC = -1;
+        if (a.faction !== b.faction) {
+          a.hp -= b.atk * getAffinityMult(b.type, a.type);
+          b.hp -= a.atk * getAffinityMult(a.type, b.type);
+        }
+      }
+    }
+  }
+  monsters = monsters.filter(m => m.hp > 0);
+
   // ⑤ 移動適用（即時 or アニメーション）
   if (skipAnimation) {
     for (const m of monsters) {

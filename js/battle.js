@@ -7,6 +7,7 @@ let gameEnded           = false;
 // =====================
 function startBattle(contactEnemy) {
   if (battleState) return;
+  if (contactEnemy.hp <= 0) return;  // ワールドターン中に撃破済みなら開始しない
 
   const race = contactEnemy.faction;
 

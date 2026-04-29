@@ -61,7 +61,7 @@ function _renderUnitCard(unit, opts) {
     const s        = playerStats();
     const pHp      = Math.max(0, Math.ceil(player.hp));
     const pHpPct   = Math.round(pHp / s.hp * 100);
-    const pHpColor = pHpPct > 50 ? '#44cc44' : pHpPct > 25 ? '#cccc44' : '#cc4444';
+    const pHpColor = hpColorFor(pHp / s.hp);
     return `<div class="battle-unit player">
       <canvas class="unit-sprite" width="48" height="48"
         data-type="player" data-hp="${pHp}" data-maxhp="${s.hp}"></canvas>
@@ -78,7 +78,7 @@ function _renderUnitCard(unit, opts) {
   const selected = opts.selected && !dead;
   const hp       = Math.max(0, Math.ceil(unit.hp));
   const hpPct    = Math.round(hp / unit.maxHp * 100);
-  const hpColor  = hpPct > 50 ? '#44cc44' : hpPct > 25 ? '#cccc44' : '#cc4444';
+  const hpColor  = hpColorFor(hp / unit.maxHp);
   const cls = ['battle-unit',
     dead ? 'dead' : (opts.targetable ? 'target-btn' : ''),
     selected ? 'selected' : '',
@@ -337,10 +337,8 @@ function endBattle(result) {
 
   if (result === 'win') {
     logMessage('⚔ 戦闘勝利！', 'battle');
-    const cr = crystals.find(c =>
-      c.r === player.gridR && c.c === player.gridC && c.owner !== 'human'
-    );
-    if (cr) {
+    const cr = crystalAtCell[player.gridR][player.gridC];
+    if (cr && cr.owner !== 'human') {
       cr.owner = 'human'; cr.spawnTimer = 0;
       logMessage(`💎 クリスタルを占領！`, 'occupy');
     }

@@ -14,6 +14,19 @@ const CRYSTAL_IMGS = {};
 let crystals = [];
 let humanAutoSpawnIndex = 0;
 
+// Lookup tables (initCrystals 内で再構築)
+let crystalAtCell  = null;   // [r][c] -> crystal | null
+let crystalByBlock = null;   // [bR][bC] -> crystal | null
+
+function rebuildCrystalLookups() {
+  crystalAtCell  = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+  crystalByBlock = Array.from({ length: 5 }, () => Array(5).fill(null));
+  for (const cr of crystals) {
+    crystalAtCell[cr.r][cr.c]            = cr;
+    crystalByBlock[cr.blockR][cr.blockC] = cr;
+  }
+}
+
 // 通路セルのリストを返す（範囲内）
 function openCells(r1, r2, c1, c2) {
   const out = [];
@@ -21,14 +34,6 @@ function openCells(r1, r2, c1, c2) {
     for (let c = c1; c <= c2; c++)
       if (grid[r] && grid[r][c] === 0) out.push([r, c]);
   return out;
-}
-
-function shuffleArr(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
 }
 
 // 迷路再生成が必要な場合は false を返す（main.js でリトライ）
@@ -40,7 +45,7 @@ function initCrystals() {
     for (let bC = 0; bC < 5; bC++) {
       const r1 = BLOCK_ROW_STARTS[bR], r2 = BLOCK_ROW_ENDS[bR];
       const c1 = BLOCK_COL_STARTS[bC], c2 = BLOCK_COL_ENDS[bC];
-      const cells = shuffleArr(openCells(r1, r2, c1, c2));
+      const cells = shuffle(openCells(r1, r2, c1, c2));
       if (cells.length === 0) return false;   // このブロックに通路なし → 再生成
 
       const [r, c] = cells[0];
@@ -57,6 +62,7 @@ function initCrystals() {
     }
   }
 
+  rebuildCrystalLookups();
   updateCrystalConnectivity();
   return true;
 }
@@ -87,7 +93,7 @@ function updateCrystalConnectivity() {
     }
     while (queue.length > 0) {
       const [bR, bC] = queue.shift();
-      const cr = crystals.find(x => x.blockR === bR && x.blockC === bC);
+      const cr = crystalByBlock[bR][bC];
       if (cr && cr.owner === faction) cr.valid = true;
 
       for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
@@ -134,56 +140,3 @@ function updateCrystals() {
   }
 }
 
-// =====================
-// ミニマップ上のクリスタルドット
-// =====================
-function drawCrystalsOnMinimap() {
-  const R        = MINIMAP;
-  const pad      = 10;
-  const mapArea  = Math.min(R.w - pad * 2, R.h - pad * 2);
-  const cellDraw = mapArea / MINIMAP_VIEW_CELLS;
-  const mapX0    = R.x + (R.w - mapArea) / 2;
-  const mapY0    = R.y + (R.h - mapArea) / 2;
-
-  const pcx      = player.pos.x / CELL_SIZE;
-  const pcy      = player.pos.y / CELL_SIZE;
-  const half     = MINIMAP_VIEW_CELLS / 2;
-  const viewLeft = pcx - half;
-  const viewTop  = pcy - half;
-
-  for (const cr of crystals) {
-    const gx = cr.c + 0.5 - viewLeft;
-    const gy = cr.r + 0.5 - viewTop;
-    if (gx < 0 || gx > MINIMAP_VIEW_CELLS ||
-        gy < 0 || gy > MINIMAP_VIEW_CELLS) continue;
-
-    const sx   = mapX0 + gx * cellDraw;
-    const sy   = mapY0 + gy * cellDraw;
-    const f    = FACTIONS[cr.owner];
-    const r    = cellDraw * 0.30;
-
-    // 外縁（黒枠・三角形）
-    ctx.beginPath();
-    ctx.moveTo(sx,               sy - (r + 1.5));
-    ctx.lineTo(sx + (r + 1.5) * 0.866, sy + (r + 1.5) * 0.5);
-    ctx.lineTo(sx - (r + 1.5) * 0.866, sy + (r + 1.5) * 0.5);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(0,0,0,0.75)';
-    ctx.fill();
-
-    // 本体（陣営色・三角形）
-    ctx.beginPath();
-    ctx.moveTo(sx,           sy - r);
-    ctx.lineTo(sx + r * 0.866, sy + r * 0.5);
-    ctx.lineTo(sx - r * 0.866, sy + r * 0.5);
-    ctx.closePath();
-    ctx.fillStyle = f ? f.color : '#888888';
-    ctx.fill();
-
-    // 頂点ハイライト
-    ctx.beginPath();
-    ctx.arc(sx, sy - r * 0.55, r * 0.22, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.fill();
-  }
-}

@@ -85,6 +85,21 @@ const FACTION_HOME_BLOCKS = {
   ogre:   [[4,4],[4,3],[3,4]],
 };
 
+// セル → 所属ブロック [bR, bC]（範囲外は null）
+const cellToBlock = (() => {
+  const t = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+  for (let bR = 0; bR < 5; bR++) {
+    for (let bC = 0; bC < 5; bC++) {
+      for (let r = BLOCK_ROW_STARTS[bR]; r <= BLOCK_ROW_ENDS[bR]; r++) {
+        for (let c = BLOCK_COL_STARTS[bC]; c <= BLOCK_COL_ENDS[bC]; c++) {
+          t[r][c] = [bR, bC];
+        }
+      }
+    }
+  }
+  return t;
+})();
+
 // =====================
 // Crystal spawn intervals (turns)
 // =====================
@@ -176,6 +191,30 @@ function wallTextureU(segA, segB, u01) {
 }
 
 function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+// 配列をその場でシャッフル（Fisher-Yates）
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// HP比率（0-1）→ 表示色
+function hpColorFor(ratio) {
+  return ratio > 0.5 ? '#44cc44' : ratio > 0.25 ? '#cccc44' : '#cc4444';
+}
+
+// '#rrggbb' → [r, g, b]
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ];
+}
 
 // =====================
 // プレイヤー定数

@@ -94,10 +94,8 @@ function spawnPlayerAtHome() {
 }
 
 function checkCrystalClaim() {
-  const cr = crystals.find(c =>
-    c.r === player.gridR && c.c === player.gridC && c.owner !== 'human'
-  );
-  if (!cr) return;
+  const cr = crystalAtCell[player.gridR][player.gridC];
+  if (!cr || cr.owner === 'human') return;
   cr.owner      = 'human';
   cr.spawnTimer = 0;
   updateCrystalConnectivity();   // 連結判定を再計算

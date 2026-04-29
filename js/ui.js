@@ -123,7 +123,7 @@ function _drawUIStatus() {
   const s     = playerStats();
   const pHp   = Math.ceil(player.hp);
   const hpPct = Math.max(0, Math.min(1, pHp / s.hp));
-  const hpCol = hpPct > 0.5 ? '#44cc44' : hpPct > 0.25 ? '#cccc44' : '#cc4444';
+  const hpCol = hpColorFor(hpPct);
 
   drawText('HP', tx, ty + 8, '#aaaaaa', 13);
   drawText(`${pHp}`, tx + 30, ty + 2, hpCol, 26);
@@ -223,25 +223,29 @@ function _drawUIFactions() {
 
   drawText('[ 勢力情報 ]', tx, ty, '#aabbcc', 13);
 
+  // 1パスで陣営別の集計（filter のループ重複を排除）
+  const crystalsByOwner = {};
+  let humanValid = 0;
+  for (const c of crystals) {
+    crystalsByOwner[c.owner] = (crystalsByOwner[c.owner] || 0) + 1;
+    if (c.owner === 'human' && c.valid) humanValid++;
+  }
+  const monstersByFaction = {};
+  for (const m of monsters) {
+    monstersByFaction[m.faction] = (monstersByFaction[m.faction] || 0) + 1;
+  }
+
   // ── 解放進捗（自陣営の有効クリスタル比率）──
-  const totalCr   = crystals.length;
-  const humanValid = crystals.filter(c => c.owner === 'human' && c.valid).length;
-  const progress  = totalCr > 0 ? Math.round(humanValid / totalCr * 100) : 0;
+  const totalCr  = crystals.length;
+  const progress = totalCr > 0 ? Math.round(humanValid / totalCr * 100) : 0;
   drawText(`解放進捗 ${progress}%`, R.x + R.w - 16, ty, '#aaccff', 13, 'right');
   ty += 22;
 
-  const factionRGB = {
-    human:  [68,  136, 255],
-    goblin: [68,  204,  68],
-    lizard: [255, 136,  68],
-    ogre:   [204,  68, 204],
-  };
-
   for (const [id, f] of Object.entries(FACTIONS)) {
     if (id === 'neutral') continue;
-    const cr  = crystals.filter(c => c.owner === id).length;
-    const un  = monsters.filter(m => m.faction === id).length;
-    const [fr, fg, fb] = factionRGB[id];
+    const cr  = crystalsByOwner[id] || 0;
+    const un  = monstersByFaction[id] || 0;
+    const [fr, fg, fb] = hexToRgb(f.color);
 
     drawText(`■ ${f.name}`, tx, ty, f.color, 14);
 

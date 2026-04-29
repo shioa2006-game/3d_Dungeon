@@ -2,18 +2,9 @@ let shopItems       = null;
 let shopSelectedIdx = 0;
 let onCrystal       = null;
 
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
 function updateOnCrystal() {
-  onCrystal = crystals.find(c =>
-    c.r === player.gridR && c.c === player.gridC && c.owner === 'human'
-  ) || null;
+  const cr = crystalAtCell[player.gridR][player.gridC];
+  onCrystal = (cr && cr.owner === 'human') ? cr : null;
 }
 
 // =====================

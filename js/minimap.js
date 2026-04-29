@@ -1,14 +1,9 @@
 // セルが属するブロックのクリスタル所有陣営を返す（中立・範囲外は null）
 function getFactionForCell(gr, gc) {
-  let bR = -1, bC = -1;
-  for (let i = 0; i < 5; i++) {
-    if (gr >= BLOCK_ROW_STARTS[i] && gr <= BLOCK_ROW_ENDS[i]) { bR = i; break; }
-  }
-  for (let i = 0; i < 5; i++) {
-    if (gc >= BLOCK_COL_STARTS[i] && gc <= BLOCK_COL_ENDS[i]) { bC = i; break; }
-  }
-  if (bR < 0 || bC < 0) return null;
-  const cr = crystals.find(x => x.blockR === bR && x.blockC === bC);
+  if (gr < 0 || gr >= GRID_SIZE || gc < 0 || gc >= GRID_SIZE) return null;
+  const block = cellToBlock[gr][gc];
+  if (!block) return null;
+  const cr = crystalByBlock[block[0]][block[1]];
   if (!cr || cr.owner === 'neutral') return null;
   return FACTIONS[cr.owner] ?? null;
 }
@@ -33,6 +28,71 @@ function toggleFullMap() { fullMapOpen = !fullMapOpen; }
 // =====================
 // ミニマップ: ユニット描画ヘルパー
 // =====================
+// =====================
+// ミニマップ上のクリスタルドット
+// =====================
+function drawCrystalsOnMinimap() {
+  const R        = MINIMAP;
+  const pad      = 10;
+  const mapArea  = Math.min(R.w - pad * 2, R.h - pad * 2);
+  const cellDraw = mapArea / MINIMAP_VIEW_CELLS;
+  const mapX0    = R.x + (R.w - mapArea) / 2;
+  const mapY0    = R.y + (R.h - mapArea) / 2;
+
+  const pcx      = player.pos.x / CELL_SIZE;
+  const pcy      = player.pos.y / CELL_SIZE;
+  const half     = MINIMAP_VIEW_CELLS / 2;
+  const viewLeft = pcx - half;
+  const viewTop  = pcy - half;
+
+  for (const cr of crystals) {
+    const gx = cr.c + 0.5 - viewLeft;
+    const gy = cr.r + 0.5 - viewTop;
+    if (gx < 0 || gx > MINIMAP_VIEW_CELLS ||
+        gy < 0 || gy > MINIMAP_VIEW_CELLS) continue;
+
+    const sx   = mapX0 + gx * cellDraw;
+    const sy   = mapY0 + gy * cellDraw;
+    const f    = FACTIONS[cr.owner];
+    const r    = cellDraw * 0.30;
+
+    // 外縁（黒枠・三角形）
+    ctx.beginPath();
+    ctx.moveTo(sx,               sy - (r + 1.5));
+    ctx.lineTo(sx + (r + 1.5) * 0.866, sy + (r + 1.5) * 0.5);
+    ctx.lineTo(sx - (r + 1.5) * 0.866, sy + (r + 1.5) * 0.5);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.fill();
+
+    // 本体（陣営色・三角形）
+    ctx.beginPath();
+    ctx.moveTo(sx,           sy - r);
+    ctx.lineTo(sx + r * 0.866, sy + r * 0.5);
+    ctx.lineTo(sx - r * 0.866, sy + r * 0.5);
+    ctx.closePath();
+    ctx.fillStyle = f ? f.color : '#888888';
+    ctx.fill();
+
+    // 頂点ハイライト
+    ctx.beginPath();
+    ctx.arc(sx, sy - r * 0.55, r * 0.22, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fill();
+  }
+}
+
+// monsters を grid セルごとにグループ化（同じ向き・キーは "r,c"）
+function groupMonstersByCell() {
+  const groups = new Map();
+  for (const m of monsters) {
+    const key = `${m.gridR},${m.gridC}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(m);
+  }
+  return groups;
+}
+
 function _drawBadge(cx, cy, count) {
   ctx.beginPath();
   ctx.arc(cx, cy, 7, 0, Math.PI * 2);
@@ -48,15 +108,7 @@ function _drawBadge(cx, cy, count) {
 function drawUnitsOnMinimap(mapX0, mapY0, viewLeft, viewTop, cellDraw) {
   const sz = cellDraw * 0.92;
 
-  // Group by grid cell
-  const cellGroups = new Map();
-  for (const m of monsters) {
-    const key = `${m.gridR},${m.gridC}`;
-    if (!cellGroups.has(key)) cellGroups.set(key, []);
-    cellGroups.get(key).push(m);
-  }
-
-  for (const [key, group] of cellGroups) {
+  for (const [key, group] of groupMonstersByCell()) {
     const [gr, gc] = key.split(',').map(Number);
     const gx = gc + 0.5 - viewLeft;
     const gy = gr + 0.5 - viewTop;
@@ -226,7 +278,7 @@ function drawFullMap() {
         const bw = (BLOCK_COL_ENDS[bC] - BLOCK_COL_STARTS[bC] + 1) * cellDraw;
         const bh = (BLOCK_ROW_ENDS[bR] - BLOCK_ROW_STARTS[bR] + 1) * cellDraw;
 
-        const blockCr  = crystals.find(x => x.blockR === bR && x.blockC === bC);
+        const blockCr  = crystalByBlock[bR][bC];
         const owner    = blockCr ? blockCr.owner : 'neutral';
         const isValid  = blockCr ? blockCr.valid : false;
         const isHome   = homeSet.has(`${bR},${bC}`);
@@ -336,13 +388,7 @@ function drawFullMap() {
   }
 
   // ユニット（陣営色の丸）
-  const cellGroups = new Map();
-  for (const m of monsters) {
-    const key = `${m.gridR},${m.gridC}`;
-    if (!cellGroups.has(key)) cellGroups.set(key, []);
-    cellGroups.get(key).push(m);
-  }
-  for (const [key, group] of cellGroups) {
+  for (const [key, group] of groupMonstersByCell()) {
     const [gr, gc] = key.split(',').map(Number);
     const sx     = mapX0 + (gc + 0.5) * cellDraw;
     const sy     = mapY0 + (gr + 0.5) * cellDraw;

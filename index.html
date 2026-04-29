@@ -4,22 +4,6 @@
 <meta charset="UTF-8">
 <title>3D Dungeon - Ray Casting FPS</title>
 <link rel="stylesheet" href="css/style.css">
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-  }
-  #game-wrapper {
-    position: relative;
-    display: inline-block;
-  }
-  canvas { display: block; }
-
-</style>
 </head>
 <body>
 <div id="game-wrapper">
@@ -64,7 +48,7 @@
       </div>
       <div class="shop-modal-note">※ 既存装備は半値で自動買取。購入で1ターン消費。</div>
       <div id="shop-items"></div>
-      <button class="shop-close-btn" onclick="closeShop()">閉じる（ターン消費なし）[Esc]</button>
+      <button class="shop-close-btn" id="btn-shop-close">閉じる（ターン消費なし）[Esc]</button>
     </div>
   </div>
 
@@ -73,7 +57,7 @@
     <div class="result-inner">
       <div class="result-title" id="result-title"></div>
       <div class="result-detail" id="result-detail"></div>
-      <button class="result-restart-btn" onclick="showRestartConfirm()">🔄 もう一度プレイ [R]</button>
+      <button class="result-restart-btn" id="btn-result-restart">🔄 もう一度プレイ [R]</button>
     </div>
   </div>
 
@@ -86,8 +70,8 @@
       <div class="restart-confirm-title">ゲームをリセットしますか？</div>
       <div class="restart-confirm-hint">現在のゲームの進行は失われます</div>
       <div class="restart-confirm-btns">
-        <button class="restart-confirm-btn yes" onclick="confirmRestart()">はい [Y]</button>
-        <button class="restart-confirm-btn no"  onclick="cancelRestartConfirm()">いいえ [N]</button>
+        <button class="restart-confirm-btn yes" id="btn-restart-yes">はい [Y]</button>
+        <button class="restart-confirm-btn no"  id="btn-restart-no">いいえ [N]</button>
       </div>
     </div>
   </div>

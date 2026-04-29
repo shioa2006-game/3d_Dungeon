@@ -32,6 +32,14 @@ function generateMazeUntilValid() {
 }
 
 // =====================
+// 静的UI要素のクリックハンドラ
+// =====================
+document.getElementById('btn-shop-close')   .addEventListener('click', () => closeShop());
+document.getElementById('btn-result-restart').addEventListener('click', () => showRestartConfirm());
+document.getElementById('btn-restart-yes')  .addEventListener('click', () => confirmRestart());
+document.getElementById('btn-restart-no')   .addEventListener('click', () => cancelRestartConfirm());
+
+// =====================
 // リセット確認ダイアログ
 // =====================
 let restartConfirmOpen = false;

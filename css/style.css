@@ -1,4 +1,24 @@
 /* =====================
+   Page reset / wrapper
+   ===================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+#game-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+canvas { display: block; }
+
+/* =====================
    Battle Panel
    ===================== */
 #battle-panel[hidden] { display: none; }

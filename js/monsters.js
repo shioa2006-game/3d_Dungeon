@@ -158,10 +158,8 @@ function updateTerritoryAI(foughtThisTurn) {
 
     // ── 敵クリスタル踏んで奪取 ──
     if (!m.retreating && !m.healing) {
-      const cr = crystals.find(x =>
-        x.r === m.gridR && x.c === m.gridC && x.owner !== m.faction
-      );
-      if (cr) {
+      const cr = crystalAtCell[m.gridR][m.gridC];
+      if (cr && cr.owner !== m.faction) {
         const prevOwner = cr.owner;
         cr.owner = m.faction;
         cr.spawnTimer = 0;

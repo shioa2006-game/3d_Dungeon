@@ -137,12 +137,26 @@ function drawSprites() {
   const R    = VIEW3D;
   const colW = R.w / RAY_COUNT;
 
+  // 同一マスグルーピング：monsters配列順に奥行きオフセット index を付与
+  const cellCounter   = new Map();
+  const monsterCellIdx = new Map();
+  for (const m of monsters) {
+    const key = `${m.gridR},${m.gridC}`;
+    const idx = cellCounter.get(key) ?? 0;
+    monsterCellIdx.set(m, idx);
+    cellCounter.set(key, idx + 1);
+  }
+
   // モンスターとクリスタルを距離でまとめてZ-sort（遠→近）
   const sprites = [];
 
   for (const m of monsters) {
     const dx = m.pos.x - player.pos.x, dy = m.pos.y - player.pos.y;
-    sprites.push({ kind: 'monster', data: m, dx, dy, dist: Math.hypot(dx, dy) });
+    const rawDist = Math.hypot(dx, dy);
+    const cellIdx = monsterCellIdx.get(m) ?? 0;
+    // index が大きいほど手前に描画・やや大きく表示（同一マス内で重なりを表現）
+    const dist = Math.max(1, rawDist - SAME_CELL_DEPTH_OFFSET * cellIdx);
+    sprites.push({ kind: 'monster', data: m, dx, dy, dist });
   }
 
   for (const cr of crystals) {

@@ -17,14 +17,15 @@ const LOOP_COUNT = 200;
 // =====================
 // 固定設定
 // =====================
-const CELL_SIZE         = 40;
-const RAY_COUNT         = 300;
-const WALL_HEIGHT_CONST = 18000;
-const MIN_DIST          = 0.0001;
+const CELL_SIZE              = 40;
+const RAY_COUNT              = 300;
+const WALL_HEIGHT_CONST      = 18000;
+const MIN_DIST               = 0.0001;
+const SAME_CELL_DEPTH_OFFSET = 8;  // 同一マス複数ユニットの奥行きオフセット（world単位）
 
 const MOVE_FRAMES   = 8;
 const ROT_FRAMES    = 6;
-const ROT_SPRING_K  = 0.25;  // 回転スプリング係数（0.15=なめらか〜0.40=キビキビ）
+const ROT_SPRING_K  = 0.10;  // 回転スプリング係数（0.10=なめらか〜0.40=キビキビ）
 
 // 向き定義: 0=N 1=E 2=S 3=W
 const FACING_DIRS = [

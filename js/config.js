@@ -22,8 +22,9 @@ const RAY_COUNT         = 300;
 const WALL_HEIGHT_CONST = 18000;
 const MIN_DIST          = 0.0001;
 
-const MOVE_FRAMES = 8;
-const ROT_FRAMES  = 6;
+const MOVE_FRAMES   = 8;
+const ROT_FRAMES    = 6;
+const ROT_SPRING_K  = 0.25;  // 回転スプリング係数（0.15=なめらか〜0.40=キビキビ）
 
 // 向き定義: 0=N 1=E 2=S 3=W
 const FACING_DIRS = [
@@ -73,9 +74,9 @@ const UNIT_DEFS = {
   human:  { hp: 35, atk: 5, faction: 'human',  sizeScale: 1.00 },
   elf:    { hp: 30, atk: 6, faction: 'human',  sizeScale: 1.00 },
   dwarf:  { hp: 40, atk: 4, faction: 'human',  sizeScale: 0.85 },
-  goblin: { hp: 28, atk: 5, faction: 'goblin', sizeScale: 0.65 },
-  lizard: { hp: 28, atk: 7, faction: 'lizard', sizeScale: 1.00 },
-  ogre:   { hp: 52, atk: 6, faction: 'ogre',   sizeScale: 1.35 },
+  goblin: { hp: 28, atk: 5, faction: 'goblin', sizeScale: 0.65, aggroRange: 1 },
+  lizard: { hp: 28, atk: 7, faction: 'lizard', sizeScale: 1.00, aggroRange: 2 },
+  ogre:   { hp: 52, atk: 6, faction: 'ogre',   sizeScale: 1.10, aggroRange: 3 },
 };
 
 const AI_UNIT          = { goblin: 'goblin', lizard: 'lizard', ogre: 'ogre' };

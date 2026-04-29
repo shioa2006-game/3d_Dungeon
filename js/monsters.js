@@ -1,5 +1,6 @@
 let monsters = [];
 let monstersAnimating = false;
+let pendingBumpCheck  = false;
 
 function facingFromMove(fromR, fromC, toR, toC) {
   const dr = toR - fromR, dc = toC - fromC;
@@ -38,6 +39,7 @@ function makeUnit(type, r, c) {
     pathRefreshTimer:   0,
     targetRefreshTimer: 0,
     battleLocked:       false,
+    aggroed:            false,
   };
 }
 
@@ -259,10 +261,33 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
       reserved.add(`${m.gridR},${m.gridC}`);
       continue;
     }
+
+    // アグロリセット
+    m.aggroed = false;
+
     let target = null;
     if (!foughtThisTurn.has(m)) {
-      target = pickTerritoryMoveTurn(m, reserved);
+      // アグロ判定（human以外・retreating/healing でない場合のみ）
+      const aggroRange = UNIT_DEFS[m.type]?.aggroRange ?? 0;
+      if (aggroRange > 0 && m.faction !== 'human' && !m.retreating && !m.healing) {
+        const dist = Math.abs(m.gridR - pDestR) + Math.abs(m.gridC - pDestC);
+        if (dist <= aggroRange) {
+          m.aggroed = true;
+          const pathToPlayer = bfsPath(grid, m.gridR, m.gridC, pDestR, pDestC);
+          if (pathToPlayer.length > 0) {
+            const step = pathToPlayer[0];
+            if (!reserved.has(`${step.r},${step.c}`)) {
+              target = step;
+            }
+          }
+          // プレイヤー方向へ進めない場合は徘徊
+          if (!target) target = pickWanderTargetTurn(m, reserved);
+        }
+      }
+
+      if (!target) target = pickTerritoryMoveTurn(m, reserved);
     }
+
     if (target) {
       m.targetR = target.r; m.targetC = target.c;
       reserved.add(`${target.r},${target.c}`);
@@ -320,6 +345,9 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
 
   // ⑥ クリスタルスポーンタイマー
   updateCrystals();
+
+  // 通常移動時のみバンプチェックを予約（バトル中ターンや即時処理では発火しない）
+  if (!skipAnimation) pendingBumpCheck = true;
 }
 
 // =====================
@@ -359,6 +387,20 @@ function checkMonsterContact() {
     if (m.hp > 0 && !m.battleLocked &&
         m.gridR === player.gridR && m.gridC === player.gridC &&
         m.faction !== 'human') {
+      startBattle(m);
+      return;
+    }
+  }
+}
+
+// アグロ状態のNPCがプレイヤー隣接マスからバンプ攻撃を仕掛ける
+function checkMonsterBumpPlayer() {
+  if (battleState) return;
+  for (const m of monsters) {
+    if (!m.aggroed || m.hp <= 0 || m.battleLocked) continue;
+    const dist = Math.abs(m.gridR - player.gridR) + Math.abs(m.gridC - player.gridC);
+    if (dist === 1) {
+      logMessage(`⚔ ${FACTIONS[m.faction].name}が襲いかかってきた！`);
       startBattle(m);
       return;
     }

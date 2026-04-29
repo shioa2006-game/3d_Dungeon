@@ -1,7 +1,8 @@
 const player = {
   pos:   new Vec2(1.5 * CELL_SIZE, 1.5 * CELL_SIZE),
-  angle: FACING_ANGLES[1],
-  fov:   60 * Math.PI / 180,
+  angle:       FACING_ANGLES[1],
+  visualAngle: FACING_ANGLES[1],  // スプリングで追従する描画専用角度
+  fov:         60 * Math.PI / 180,
 
   gridR:  1,
   gridC:  1,
@@ -13,12 +14,6 @@ const player = {
   moveProgress: 0,
   nextGridR:    1,
   nextGridC:    1,
-
-  rotating:      false,
-  angleFrom:     0,
-  angleTo:       0,
-  rotProgress:   0,
-  pendingFacing: 1,
 
   hp:    PLAYER_INIT.hp,
   gold:  0,
@@ -83,8 +78,8 @@ function spawnPlayerAtHome() {
   player.gridR = target.r;
   player.gridC = target.c;
   player.pos   = new Vec2((target.c + 0.5) * CELL_SIZE, (target.r + 0.5) * CELL_SIZE);
-  player.moving   = false;
-  player.rotating = false;
+  player.moving      = false;
+  player.visualAngle = player.angle;  // テレポート時はスプリングをスナップ
   markExplored();
   updateOnCrystal();
 }
@@ -133,11 +128,10 @@ function startMove(dir) {
 }
 
 function startRotate(dir) {
-  player.rotating      = true;
-  player.angleFrom     = player.angle;
-  player.angleTo       = player.angle + dir * Math.PI / 2;
-  player.rotProgress   = 0;
-  player.pendingFacing = (player.facing + dir + 4) % 4;
+  // ゲームロジック（facing / angle）を即時確定
+  // visualAngle は updatePlayer() のスプリングで滑らかに追従する
+  player.facing = (player.facing + dir + 4) % 4;
+  player.angle  = FACING_ANGLES[player.facing];
 }
 
 function updatePlayer() {
@@ -161,15 +155,7 @@ function updatePlayer() {
     }
   }
 
-  if (player.rotating) {
-    player.rotProgress += 1 / ROT_FRAMES;
-    if (player.rotProgress >= 1) {
-      player.rotating = false;
-      player.facing   = player.pendingFacing;
-      player.angle    = FACING_ANGLES[player.facing];
-    } else {
-      const t = smoothstep(player.rotProgress);
-      player.angle = player.angleFrom + (player.angleTo - player.angleFrom) * t;
-    }
-  }
+  // スプリングモデル: visualAngle が player.angle に向かって毎フレーム追従
+  const rotDiff = normalizeAngle(player.angle - player.visualAngle);
+  player.visualAngle += rotDiff * ROT_SPRING_K;
 }

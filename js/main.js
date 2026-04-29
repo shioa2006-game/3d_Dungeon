@@ -9,7 +9,7 @@ canvas.height = CANVAS_H;
 // Wheel（canvas 参照が必要なため main.js で登録）
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
-  if (player.moving || player.rotating || monstersAnimating) return;
+  if (player.moving || monstersAnimating) return;
   if (e.deltaY < 0) startMove(player.facing);
   else              startMove((player.facing + 2) % 4);
 }, { passive: false });
@@ -44,7 +44,8 @@ function newMaze() {
   player.gridR  = 1; player.gridC  = 1; player.facing = 1;
   player.pos    = new Vec2(1.5 * CELL_SIZE, 1.5 * CELL_SIZE);
   player.angle  = FACING_ANGLES[1];
-  player.moving = false; player.rotating = false;
+  player.moving      = false;
+  player.visualAngle = FACING_ANGLES[1];  // テレポート時にスナップ
 
   initExplored();
   initCrystals();      // spawnMonsters が crystals を参照するため先に実行
@@ -73,6 +74,12 @@ function gameLoop() {
   handleInput();
   updatePlayer();
   animateMonsters();
+
+  // NPCアグロバンプ：プレイヤーとモンスター両方のアニメーションが完了したタイミングで発火
+  if (pendingBumpCheck && !player.moving && !monstersAnimating && !battleState && !gameEnded) {
+    pendingBumpCheck = false;
+    checkMonsterBumpPlayer();
+  }
 
   // Q3b: アニメーション完了後にバトル画面を再描画
   if (battleNeedsRerender && !monstersAnimating) {

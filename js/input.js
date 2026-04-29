@@ -26,7 +26,7 @@ function handleInput() {
     return;
   }
 
-  if (player.moving || player.rotating || monstersAnimating) return;
+  if (player.moving || monstersAnimating) return;
 
   if (keysJustPressed.has('ArrowLeft')  || keysJustPressed.has('KeyA')) { startRotate(-1); return; }
   if (keysJustPressed.has('ArrowRight') || keysJustPressed.has('KeyD')) { startRotate( 1); return; }

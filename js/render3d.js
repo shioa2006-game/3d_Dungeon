@@ -4,7 +4,7 @@ function castRays() {
   const hits = [];
   const ox   = player.pos.x, oy = player.pos.y;
   const half = player.fov / 2;
-  const base = player.angle - half;
+  const base = player.visualAngle - half;
   const span = player.fov;
 
   for (let i = 0; i < RAY_COUNT; i++) {
@@ -53,7 +53,7 @@ function drawView3D(hits) {
     if (!h.hit) continue;
 
     const x0       = R.x + i * colW;
-    const corrDist = Math.max(MIN_DIST, h.dist * Math.cos(h.rayAngle - player.angle));
+    const corrDist = Math.max(MIN_DIST, h.dist * Math.cos(h.rayAngle - player.visualAngle));
     depthBuffer[i] = corrDist;
 
     let wallH = WALL_HEIGHT_CONST / corrDist;
@@ -76,8 +76,7 @@ function drawView3D(hits) {
 
 function drawCompass() {
   const R = VIEW3D;
-  let displayFacing = player.facing;
-  if (player.rotating) displayFacing = player.pendingFacing;
+  const displayFacing = player.facing;  // facing は startRotate() で即時確定
 
   const cx = R.x + R.w / 2;
   const cy = R.y + 30;
@@ -161,7 +160,7 @@ function drawSprites() {
     const { dx, dy, dist } = sp;
     if (dist < 1) continue;
 
-    const relAngle = normalizeAngle(Math.atan2(dy, dx) - player.angle);
+    const relAngle = normalizeAngle(Math.atan2(dy, dx) - player.visualAngle);
     if (Math.abs(relAngle) > player.fov / 2 + 0.4) continue;
 
     const corrDist    = Math.max(MIN_DIST, dist * Math.cos(relAngle));

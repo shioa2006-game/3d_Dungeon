@@ -133,15 +133,15 @@ function drawMinimap() {
   const triDist = circR + cellDraw * 0.28;
   const triH    = cellDraw * 0.28;
   const triW    = cellDraw * 0.22;
-  const triCx   = px + Math.cos(player.angle) * triDist;
-  const triCy   = py + Math.sin(player.angle) * triDist;
-  const perpA   = player.angle + Math.PI / 2;
-  const tx  = triCx + Math.cos(player.angle) * triH * 0.6;
-  const ty  = triCy + Math.sin(player.angle) * triH * 0.6;
-  const bx1 = triCx - Math.cos(player.angle) * triH * 0.4 + Math.cos(perpA) * triW;
-  const by1 = triCy - Math.sin(player.angle) * triH * 0.4 + Math.sin(perpA) * triW;
-  const bx2 = triCx - Math.cos(player.angle) * triH * 0.4 - Math.cos(perpA) * triW;
-  const by2 = triCy - Math.sin(player.angle) * triH * 0.4 - Math.sin(perpA) * triW;
+  const triCx   = px + Math.cos(player.visualAngle) * triDist;
+  const triCy   = py + Math.sin(player.visualAngle) * triDist;
+  const perpA   = player.visualAngle + Math.PI / 2;
+  const tx  = triCx + Math.cos(player.visualAngle) * triH * 0.6;
+  const ty  = triCy + Math.sin(player.visualAngle) * triH * 0.6;
+  const bx1 = triCx - Math.cos(player.visualAngle) * triH * 0.4 + Math.cos(perpA) * triW;
+  const by1 = triCy - Math.sin(player.visualAngle) * triH * 0.4 + Math.sin(perpA) * triW;
+  const bx2 = triCx - Math.cos(player.visualAngle) * triH * 0.4 - Math.cos(perpA) * triW;
+  const by2 = triCy - Math.sin(player.visualAngle) * triH * 0.4 - Math.sin(perpA) * triW;
 
   ctx.beginPath();
   ctx.moveTo(tx, ty); ctx.lineTo(bx1, by1); ctx.lineTo(bx2, by2);
@@ -250,8 +250,8 @@ function drawFullMap() {
   ctx.beginPath();
   ctx.moveTo(psx, psy);
   ctx.lineTo(
-    psx + Math.cos(player.angle) * cellDraw * 1.5,
-    psy + Math.sin(player.angle) * cellDraw * 1.5
+    psx + Math.cos(player.visualAngle) * cellDraw * 1.5,
+    psy + Math.sin(player.visualAngle) * cellDraw * 1.5
   );
   ctx.strokeStyle = '#66bbff';
   ctx.lineWidth   = 2;

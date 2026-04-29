@@ -21,6 +21,16 @@ let grid  = generateMaze(GRID_SIZE);
 addLoops(grid, LOOP_COUNT, GRID_SIZE);
 let walls = gridToWalls(grid);
 
+// ブロック全 25 個に通路セルが存在することを保証する再生成ヘルパー
+function generateMazeUntilValid() {
+  while (true) {
+    grid  = generateMaze(GRID_SIZE);
+    addLoops(grid, LOOP_COUNT, GRID_SIZE);
+    walls = gridToWalls(grid);
+    if (initCrystals()) break;   // 全ブロックに通路あり → 成功
+  }
+}
+
 // =====================
 // 新規迷路生成 / リスタート（R キー・リスタートボタンで呼び出し）
 // =====================
@@ -37,9 +47,7 @@ function newMaze() {
   document.getElementById('shop-modal').hidden   = true;
   document.getElementById('result-screen').hidden = true;
 
-  grid  = generateMaze(GRID_SIZE);
-  addLoops(grid, LOOP_COUNT, GRID_SIZE);
-  walls = gridToWalls(grid);
+  generateMazeUntilValid();   // grid/walls/crystals を一括確定（initCrystals 内包）
 
   player.gridR  = 1; player.gridC  = 1; player.facing = 1;
   player.pos    = new Vec2(1.5 * CELL_SIZE, 1.5 * CELL_SIZE);
@@ -48,9 +56,7 @@ function newMaze() {
   player.visualAngle = FACING_ANGLES[1];  // テレポート時にスナップ
 
   initExplored();
-  initCrystals();      // spawnMonsters が crystals を参照するため先に実行
   spawnMonsters();
-  humanAutoSpawnIndex = 0;
   initPlayerStats();
   spawnPlayerAtHome();
   updateOnCrystal();
@@ -60,7 +66,7 @@ function newMaze() {
 // 初期化
 // =====================
 initExplored();
-initCrystals();
+generateMazeUntilValid();   // grid/walls/crystals を一括確定
 spawnMonsters();
 initPlayerStats();
 

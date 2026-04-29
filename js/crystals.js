@@ -31,50 +31,75 @@ function shuffleArr(arr) {
   return arr;
 }
 
+// 迷路再生成が必要な場合は false を返す（main.js でリトライ）
 function initCrystals() {
   crystals = [];
-  const E = GRID_SIZE - 2;   // 49
-  const Z = 11;
-  const usedCells = new Set();
+  humanAutoSpawnIndex = 0;
 
-  function pickCells(r1, r2, c1, c2, n) {
-    const candidates = shuffleArr(openCells(r1, r2, c1, c2))
-      .filter(([r, c]) => !usedCells.has(`${r},${c}`));
-    const picked = candidates.slice(0, n);
-    picked.forEach(([r, c]) => usedCells.add(`${r},${c}`));
-    return picked;
-  }
+  for (let bR = 0; bR < 5; bR++) {
+    for (let bC = 0; bC < 5; bC++) {
+      const r1 = BLOCK_ROW_STARTS[bR], r2 = BLOCK_ROW_ENDS[bR];
+      const c1 = BLOCK_COL_STARTS[bC], c2 = BLOCK_COL_ENDS[bC];
+      const cells = shuffleArr(openCells(r1, r2, c1, c2));
+      if (cells.length === 0) return false;   // このブロックに通路なし → 再生成
 
-  // 四隅の陣営ゾーン（各 3 個・陣営所有）
-  const cornerZones = [
-    { owner: 'human',  r1: 1,   r2: Z,   c1: 1,   c2: Z   },
-    { owner: 'goblin', r1: 1,   r2: Z,   c1: E-Z, c2: E   },
-    { owner: 'lizard', r1: E-Z, r2: E,   c1: 1,   c2: Z   },
-    { owner: 'ogre',   r1: E-Z, r2: E,   c1: E-Z, c2: E   },
-  ];
-  for (const z of cornerZones) {
-    const interval = z.owner === 'human' ? HUMAN_SPAWN_COOLDOWN : AI_SPAWN[z.owner];
-    for (const [r, c] of pickCells(z.r1, z.r2, z.c1, z.c2, 3)) {
-      crystals.push({ r, c, owner: z.owner, spawnTimer: Math.random() * interval });
+      const [r, c] = cells[0];
+      const owner  = BLOCK_INIT_OWNER[bR][bC];
+      const interval = owner === 'human' ? HUMAN_SPAWN_COOLDOWN : AI_SPAWN[owner];
+      crystals.push({
+        r, c,
+        owner,
+        spawnTimer: owner === 'neutral' ? 0 : Math.random() * (interval ?? 0),
+        blockR: bR,
+        blockC: bC,
+        valid:  false,   // updateCrystalConnectivity() で確定
+      });
     }
   }
 
-  // 陣営ゾーン隣接の中立エリア（各 2 個）
-  const nearZones = [
-    { r1: 1,     r2: Z+6, c1: Z+1,   c2: Z+6   },
-    { r1: 1,     r2: Z+6, c1: E-Z-6, c2: E-1   },
-    { r1: E-Z-6, r2: E-1, c1: Z+1,   c2: Z+6   },
-    { r1: E-Z-6, r2: E-1, c1: E-Z-6, c2: E-1   },
-  ];
-  for (const z of nearZones) {
-    for (const [r, c] of pickCells(z.r1, z.r2, z.c1, z.c2, 2)) {
-      crystals.push({ r, c, owner: 'neutral', spawnTimer: 0 });
-    }
-  }
+  updateCrystalConnectivity();
+  return true;
+}
 
-  // 中央エリア（8 個・中立）
-  for (const [r, c] of pickCells(Z+2, E-Z-2, Z+2, E-Z-2, 8)) {
-    crystals.push({ r, c, owner: 'neutral', spawnTimer: 0 });
+// =====================
+// 連結判定（所有者変更のたびに呼び出す）
+// =====================
+function updateCrystalConnectivity() {
+  // 全クリスタルをいったん無効化
+  for (const cr of crystals) cr.valid = false;
+
+  for (const [faction, homeBlocks] of Object.entries(FACTION_HOME_BLOCKS)) {
+    // この陣営が所有するブロックキーのセット
+    const ownedKeys = new Set(
+      crystals.filter(cr => cr.owner === faction)
+               .map(cr => `${cr.blockR},${cr.blockC}`)
+    );
+
+    // BFS：本拠ブロックから同陣営の隣接ブロックをたどる
+    const visited = new Set();
+    const queue   = [];
+    for (const [hR, hC] of homeBlocks) {
+      const key = `${hR},${hC}`;
+      if (ownedKeys.has(key) && !visited.has(key)) {
+        visited.add(key);
+        queue.push([hR, hC]);
+      }
+    }
+    while (queue.length > 0) {
+      const [bR, bC] = queue.shift();
+      const cr = crystals.find(x => x.blockR === bR && x.blockC === bC);
+      if (cr && cr.owner === faction) cr.valid = true;
+
+      for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+        const nr = bR + dr, nc = bC + dc;
+        if (nr < 0 || nr > 4 || nc < 0 || nc > 4) continue;
+        const key = `${nr},${nc}`;
+        if (!visited.has(key) && ownedKeys.has(key)) {
+          visited.add(key);
+          queue.push([nr, nc]);
+        }
+      }
+    }
   }
 }
 
@@ -82,6 +107,7 @@ function initCrystals() {
 // ターン処理（プレイヤー移動ごとに呼び出し）
 // =====================
 function trySpawnFromCrystal(cr) {
+  if (!cr.valid) return;   // 飛び地クリスタルはスポーン不可
   const type = cr.owner === 'human'
     ? HUMAN_AUTO_TYPES[humanAutoSpawnIndex % HUMAN_AUTO_TYPES.length]
     : AI_UNIT[cr.owner];

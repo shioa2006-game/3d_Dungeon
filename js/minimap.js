@@ -1,11 +1,16 @@
-// セルが属する陣営を返す（中立・範囲外は null）
+// セルが属するブロックのクリスタル所有陣営を返す（中立・範囲外は null）
 function getFactionForCell(gr, gc) {
-  for (const f of Object.values(FACTIONS)) {
-    if (!f.zone) continue;
-    const [r1, r2, c1, c2] = f.zone;
-    if (gr >= r1 && gr <= r2 && gc >= c1 && gc <= c2) return f;
+  let bR = -1, bC = -1;
+  for (let i = 0; i < 5; i++) {
+    if (gr >= BLOCK_ROW_STARTS[i] && gr <= BLOCK_ROW_ENDS[i]) { bR = i; break; }
   }
-  return null;
+  for (let i = 0; i < 5; i++) {
+    if (gc >= BLOCK_COL_STARTS[i] && gc <= BLOCK_COL_ENDS[i]) { bC = i; break; }
+  }
+  if (bR < 0 || bC < 0) return null;
+  const cr = crystals.find(x => x.blockR === bR && x.blockC === bC);
+  if (!cr || cr.owner === 'neutral') return null;
+  return FACTIONS[cr.owner] ?? null;
 }
 
 // =====================

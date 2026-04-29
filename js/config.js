@@ -50,14 +50,39 @@ const MINIMAP_VIEW_CELLS = 7;
 
 // =====================
 // Factions（4 陣営 + 中立）
-// zone: [r1, r2, c1, c2]
 // =====================
 const FACTIONS = {
-  human:   { name: '人間族',   color: '#4488ff', zone: [0,  12, 0,  12] },
-  goblin:  { name: 'ゴブリン', color: '#44cc44', zone: [0,  12, 38, 50] },
-  lizard:  { name: 'リザード', color: '#ff8844', zone: [38, 50, 0,  12] },
-  ogre:    { name: 'オーガ',   color: '#cc44cc', zone: [38, 50, 38, 50] },
-  neutral: { name: '中立',     color: '#666666', zone: null },
+  human:   { name: '人間族',   color: '#4488ff' },
+  goblin:  { name: 'ゴブリン', color: '#44cc44' },
+  lizard:  { name: 'リザード', color: '#ff8844' },
+  ogre:    { name: 'オーガ',   color: '#cc44cc' },
+  neutral: { name: '中立',     color: '#666666' },
+};
+
+// =====================
+// ブロック分割（5×5 = 25ブロック、プレイ範囲 row/col 1〜49）
+// 列幅: 10,10,9,10,10 / 行高: 10,10,9,10,10（歪みを中央に集約）
+// =====================
+const BLOCK_COL_STARTS = [1,  11, 21, 30, 40];
+const BLOCK_COL_ENDS   = [10, 20, 29, 39, 49];
+const BLOCK_ROW_STARTS = [1,  11, 21, 30, 40];
+const BLOCK_ROW_ENDS   = [10, 20, 29, 39, 49];
+
+// 5×5 初期所有者マップ（行index × 列index）
+const BLOCK_INIT_OWNER = [
+  ['human',   'human',   'neutral', 'goblin',  'goblin' ],
+  ['human',   'neutral', 'neutral', 'neutral', 'goblin' ],
+  ['neutral', 'neutral', 'neutral', 'neutral', 'neutral'],
+  ['lizard',  'neutral', 'neutral', 'neutral', 'ogre'   ],
+  ['lizard',  'lizard',  'neutral', 'ogre',    'ogre'   ],
+];
+
+// 各陣営の本拠ブロック（BFS連結の起点）
+const FACTION_HOME_BLOCKS = {
+  human:  [[0,0],[0,1],[1,0]],
+  goblin: [[0,4],[0,3],[1,4]],
+  lizard: [[4,0],[4,1],[3,0]],
+  ogre:   [[4,4],[4,3],[3,4]],
 };
 
 // =====================

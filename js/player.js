@@ -69,10 +69,19 @@ function playerAtkVs(raceOrType) {
 
 function spawnPlayerAtHome() {
   let best = null, bestDist = Infinity;
+  // 有効な人間族クリスタルのみ復活先候補とする
   for (const cr of crystals) {
-    if (cr.owner !== 'human') continue;
+    if (cr.owner !== 'human' || !cr.valid) continue;
     const d = Math.abs(cr.r - player.gridR) + Math.abs(cr.c - player.gridC);
     if (d < bestDist) { bestDist = d; best = cr; }
+  }
+  // フォールバック：有効クリスタルがゼロの場合は所有クリスタル全体から探す
+  if (!best) {
+    for (const cr of crystals) {
+      if (cr.owner !== 'human') continue;
+      const d = Math.abs(cr.r - player.gridR) + Math.abs(cr.c - player.gridC);
+      if (d < bestDist) { bestDist = d; best = cr; }
+    }
   }
   const target = best ?? { r: 1, c: 1 };
   player.gridR = target.r;
@@ -91,6 +100,7 @@ function checkCrystalClaim() {
   if (!cr) return;
   cr.owner      = 'human';
   cr.spawnTimer = 0;
+  updateCrystalConnectivity();   // 連結判定を再計算
   updateOnCrystal();
   logMessage(`💎 クリスタルを人間族に転換！`);
   checkWinLoss();

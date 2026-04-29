@@ -21,6 +21,10 @@ function updateOnCrystal() {
 // =====================
 function healAtCrystal() {
   if (!onCrystal || battleState || shopItems || gameEnded) return;
+  if (!onCrystal.valid) {
+    logMessage('⚠️ このクリスタルは本拠地から切断されています');
+    return;
+  }
   const s   = playerStats();
   const old = player.hp;
   player.hp = Math.min(s.hp, player.hp + s.rec);
@@ -34,6 +38,10 @@ function healAtCrystal() {
 // =====================
 function openShop() {
   if (!onCrystal || battleState || shopItems || gameEnded) return;
+  if (!onCrystal.valid) {
+    logMessage('⚠️ このクリスタルは本拠地から切断されています');
+    return;
+  }
   const pool  = shuffle([...SHOP_POOL]);
   shopItems        = pool.slice(0, SHOP_ROLL_N);
   shopSelectedIdx  = 0;

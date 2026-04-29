@@ -60,7 +60,7 @@ function spawnMonsters() {
 function nearestFriendlyCrystal(m) {
   let best = null, bestDist = Infinity;
   for (const cr of crystals) {
-    if (cr.owner !== m.faction) continue;
+    if (cr.owner !== m.faction || !cr.valid) continue;  // 飛び地は撤退先にしない
     const d = Math.abs(cr.r - m.gridR) + Math.abs(cr.c - m.gridC);
     if (d < bestDist) { bestDist = d; best = cr; }
   }
@@ -70,6 +70,20 @@ function nearestFriendlyCrystal(m) {
 function randomEnemyCrystal(m) {
   const candidates = crystals.filter(cr => cr.owner !== m.faction);
   if (candidates.length === 0) return null;
+
+  // 自陣の有効ブロックに4方向隣接するブロックキーを収集
+  const adjKeys = new Set();
+  for (const cr of crystals) {
+    if (cr.owner !== m.faction || !cr.valid) continue;
+    for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const nr = cr.blockR + dr, nc = cr.blockC + dc;
+      if (nr >= 0 && nr <= 4 && nc >= 0 && nc <= 4) adjKeys.add(`${nr},${nc}`);
+    }
+  }
+
+  // 有効隣接ブロックに属する敵クリスタルを優先プール、なければ全体にフォールバック
+  const preferred = candidates.filter(cr => adjKeys.has(`${cr.blockR},${cr.blockC}`));
+  const pool      = preferred.length > 0 ? preferred : candidates;
 
   // 同陣営で各クリスタルを狙っているユニット数を集計（集中ペナルティ用）
   const targetCount = new Map();
@@ -81,7 +95,7 @@ function randomEnemyCrystal(m) {
 
   // 距離が近いほど重みが高い + 集中しているクリスタルは二乗ペナルティで重みを下げる
   // count=0: ×1, count=1: ÷2, count=2: ÷5, count=3: ÷10
-  const weights = candidates.map(cr => {
+  const weights = pool.map(cr => {
     const dist  = Math.abs(cr.r - m.gridR) + Math.abs(cr.c - m.gridC) + 1;
     const count = targetCount.get(`${cr.r},${cr.c}`) || 0;
     return (1 / dist) / (1 + count * count);
@@ -89,11 +103,11 @@ function randomEnemyCrystal(m) {
 
   const total = weights.reduce((a, b) => a + b, 0);
   let rand = Math.random() * total;
-  for (let i = 0; i < candidates.length; i++) {
+  for (let i = 0; i < pool.length; i++) {
     rand -= weights[i];
-    if (rand <= 0) return candidates[i];
+    if (rand <= 0) return pool[i];
   }
-  return candidates[candidates.length - 1];
+  return pool[pool.length - 1];
 }
 
 // =====================
@@ -132,7 +146,8 @@ function updateTerritoryAI(foughtThisTurn) {
 
     // ── 退却中 ──
     if (m.retreating) {
-      if (!m.retreatTarget || m.retreatTarget.owner !== m.faction) {
+      // 撤退先が無効（所有者変更 or 飛び地化）なら有効クリスタルへ転向
+      if (!m.retreatTarget || m.retreatTarget.owner !== m.faction || !m.retreatTarget.valid) {
         const next = nearestFriendlyCrystal(m);
         if (next) { m.retreatTarget = next; m.path = []; m.pathRefreshTimer = 0; }
         else      { m.retreating = false; m.retreatTarget = null; }
@@ -150,6 +165,7 @@ function updateTerritoryAI(foughtThisTurn) {
         const prevOwner = cr.owner;
         cr.owner = m.faction;
         cr.spawnTimer = 0;
+        updateCrystalConnectivity();          // 連結判定を再計算
         m.path = []; m.pathRefreshTimer = PATH_REFRESH;
         m.targetCrystal = randomEnemyCrystal(m);
         m.targetRefreshTimer = 0;

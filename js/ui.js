@@ -144,7 +144,7 @@ function _drawUIFactions() {
   };
 
   for (const [id, f] of Object.entries(FACTIONS)) {
-    if (!f.zone) continue;
+    if (id === 'neutral') continue;
     const cr  = crystals.filter(c => c.owner === id).length;
     const un  = monsters.filter(m => m.faction === id).length;
     const [fr, fg, fb] = factionRGB[id];

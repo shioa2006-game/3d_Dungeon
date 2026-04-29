@@ -430,3 +430,90 @@
   border-color: #5577cc;
   color: #ddeeff;
 }
+
+/* =====================
+   全体マップ専用キャンバス
+   ===================== */
+#fullmap-c[hidden] { display: none; }
+#fullmap-c {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  display: block;
+}
+
+/* =====================
+   リセット確認ダイアログ
+   ===================== */
+#restart-confirm[hidden] { display: none; }
+
+#restart-confirm {
+  position: absolute;
+  left: 0; top: 0;
+  width: 1000px; height: 700px;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 60;
+  font-family: monospace;
+}
+
+.restart-confirm-inner {
+  background: #0e0e1c;
+  border: 2px solid #4455aa;
+  border-radius: 5px;
+  padding: 28px 40px;
+  text-align: center;
+  box-shadow: 0 0 24px rgba(60, 80, 200, 0.35);
+}
+
+.restart-confirm-title {
+  font-size: 19px;
+  font-weight: bold;
+  color: #ddeeff;
+  margin-bottom: 8px;
+}
+
+.restart-confirm-hint {
+  font-size: 12px;
+  color: #667;
+  margin-bottom: 22px;
+}
+
+.restart-confirm-btns {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.restart-confirm-btn {
+  padding: 8px 28px;
+  font-family: monospace;
+  font-size: 14px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.restart-confirm-btn.yes {
+  background: #1a2245;
+  border: 1px solid #5577cc;
+  color: #88ccff;
+}
+.restart-confirm-btn.yes:hover {
+  background: #2a3255;
+  border-color: #7799ee;
+  color: #ddeeff;
+}
+
+.restart-confirm-btn.no {
+  background: #14142a;
+  border: 1px solid #334;
+  color: #99aacc;
+}
+.restart-confirm-btn.no:hover {
+  background: #22224a;
+  border-color: #5577cc;
+  color: #ddeeff;
+}

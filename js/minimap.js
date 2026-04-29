@@ -14,9 +14,20 @@ function getFactionForCell(gr, gc) {
 }
 
 // =====================
-// 全体マップ state
+// 全体マップ state（専用キャンバスで最前面表示）
 // =====================
 let fullMapOpen = false;
+let _fmCanvas   = null;
+let _fmCtx      = null;
+
+function _initFmCanvas() {
+  if (_fmCanvas) return;
+  _fmCanvas = document.getElementById('fullmap-c');
+  _fmCanvas.width  = CANVAS_W;
+  _fmCanvas.height = CANVAS_H;
+  _fmCtx = _fmCanvas.getContext('2d');
+}
+
 function toggleFullMap() { fullMapOpen = !fullMapOpen; }
 
 // =====================
@@ -160,10 +171,18 @@ function drawMinimap() {
 }
 
 // =====================
-// 全体マップ（Mキーで開閉）
+// 全体マップ（Mキーで開閉）— 専用キャンバスに描画して最前面表示
 // =====================
 function drawFullMap() {
-  if (!fullMapOpen) return;
+  _initFmCanvas();
+
+  if (!fullMapOpen) {
+    _fmCanvas.hidden = true;
+    return;
+  }
+  _fmCanvas.hidden = false;
+  const c = _fmCtx;
+  c.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
   const cellDraw = 12;
   const mapW  = GRID_SIZE * cellDraw;   // 51 × 12 = 612
@@ -172,12 +191,12 @@ function drawFullMap() {
   const mapY0 = Math.floor((CANVAS_H - mapH) / 2);   // 44
 
   // 暗転オーバーレイ
-  ctx.fillStyle = 'rgba(0,0,0,0.82)';
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  c.fillStyle = 'rgba(0,0,0,0.82)';
+  c.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
   // マップ全体を壁色で塗りつぶし
-  ctx.fillStyle = '#445544';
-  ctx.fillRect(mapX0, mapY0, mapW, mapH);
+  c.fillStyle = '#445544';
+  c.fillRect(mapX0, mapY0, mapW, mapH);
 
   // 通路セルを描画
   for (let gr = 0; gr < GRID_SIZE; gr++) {
@@ -185,15 +204,104 @@ function drawFullMap() {
       if (grid[gr][gc] !== 0) continue;
       const sx = mapX0 + gc * cellDraw;
       const sy = mapY0 + gr * cellDraw;
-      ctx.fillStyle = '#111111';
-      ctx.fillRect(sx, sy, cellDraw, cellDraw);
+      c.fillStyle = '#111111';
+      c.fillRect(sx, sy, cellDraw, cellDraw);
       const f = getFactionForCell(gr, gc);
       if (f) {
-        ctx.fillStyle = f.color + '44';
-        ctx.fillRect(sx, sy, cellDraw, cellDraw);
+        c.fillStyle = f.color + '44';
+        c.fillRect(sx, sy, cellDraw, cellDraw);
       }
     }
   }
+
+  // ── 案A：ブロックグリッド + ホームマーカー ──
+  {
+    const homeSet = new Set(FACTION_HOME_BLOCKS.human.map(([r, cv]) => `${r},${cv}`));
+
+    // 各ブロックのオーバーレイ
+    for (let bR = 0; bR < 5; bR++) {
+      for (let bC = 0; bC < 5; bC++) {
+        const bx = mapX0 + BLOCK_COL_STARTS[bC] * cellDraw;
+        const by = mapY0 + BLOCK_ROW_STARTS[bR] * cellDraw;
+        const bw = (BLOCK_COL_ENDS[bC] - BLOCK_COL_STARTS[bC] + 1) * cellDraw;
+        const bh = (BLOCK_ROW_ENDS[bR] - BLOCK_ROW_STARTS[bR] + 1) * cellDraw;
+
+        const blockCr  = crystals.find(x => x.blockR === bR && x.blockC === bC);
+        const owner    = blockCr ? blockCr.owner : 'neutral';
+        const isValid  = blockCr ? blockCr.valid : false;
+        const isHome   = homeSet.has(`${bR},${bC}`);
+
+        // 人間族ブロックの有効/無効オーバーレイ
+        if (owner === 'human') {
+          if (isValid) {
+            // 有効（連結済み）：明るい青オーバーレイ
+            c.fillStyle = 'rgba(68, 136, 255, 0.22)';
+            c.fillRect(bx, by, bw, bh);
+          } else {
+            // 無効（切断）：暗い青 + 斜線ハッチング + オレンジ点線枠
+            c.fillStyle = 'rgba(30, 50, 100, 0.45)';
+            c.fillRect(bx, by, bw, bh);
+            c.save();
+            c.beginPath(); c.rect(bx, by, bw, bh); c.clip();
+            c.strokeStyle = 'rgba(80, 110, 180, 0.30)';
+            c.lineWidth = 1;
+            for (let d = -bh; d < bw + bh; d += 10) {
+              c.beginPath();
+              c.moveTo(bx + d,      by);
+              c.lineTo(bx + d + bh, by + bh);
+              c.stroke();
+            }
+            c.restore();
+            c.strokeStyle = 'rgba(255, 140, 0, 0.65)';
+            c.lineWidth = 1.5;
+            c.setLineDash([4, 3]);
+            c.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+            c.setLineDash([]);
+          }
+        }
+
+        // ホームブロックの枠 + ★マーカー
+        if (isHome) {
+          if (owner === 'human') {
+            // 所有中：青白枠
+            c.strokeStyle = isValid ? 'rgba(160, 210, 255, 0.90)' : 'rgba(120, 170, 255, 0.70)';
+            c.lineWidth = 2;
+            c.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+          } else {
+            // 敵に奪われた：赤枠
+            c.strokeStyle = 'rgba(255, 60, 60, 0.90)';
+            c.lineWidth = 2;
+            c.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+          }
+          // ★テキスト（左上隅）
+          c.fillStyle    = owner === 'human' ? 'rgba(180, 220, 255, 1.0)' : 'rgba(255, 90, 90, 1.0)';
+          c.font         = 'bold 11px monospace';
+          c.textAlign    = 'left';
+          c.textBaseline = 'top';
+          c.fillText('★', bx + 3, by + 2);
+        }
+      }
+    }
+
+    // 5×5 ブロック境界線（薄い白）
+    c.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+    c.lineWidth   = 1;
+    const blkTopY    = mapY0 + BLOCK_ROW_STARTS[0] * cellDraw;
+    const blkBottomY = mapY0 + (BLOCK_ROW_ENDS[4] + 1) * cellDraw;
+    const blkLeftX   = mapX0 + BLOCK_COL_STARTS[0] * cellDraw;
+    const blkRightX  = mapX0 + (BLOCK_COL_ENDS[4] + 1) * cellDraw;
+    for (let i = 0; i <= 5; i++) {
+      const gc = i < 5 ? BLOCK_COL_STARTS[i] : BLOCK_COL_ENDS[4] + 1;
+      const sx = mapX0 + gc * cellDraw;
+      c.beginPath(); c.moveTo(sx, blkTopY); c.lineTo(sx, blkBottomY); c.stroke();
+    }
+    for (let i = 0; i <= 5; i++) {
+      const gr = i < 5 ? BLOCK_ROW_STARTS[i] : BLOCK_ROW_ENDS[4] + 1;
+      const sy = mapY0 + gr * cellDraw;
+      c.beginPath(); c.moveTo(blkLeftX, sy); c.lineTo(blkRightX, sy); c.stroke();
+    }
+  }
+  // ── ここまで A案 ──
 
   // クリスタル（三角形）
   for (const cr of crystals) {
@@ -203,28 +311,28 @@ function drawFullMap() {
     const r  = 4.5;
 
     // 外縁（黒枠）
-    ctx.beginPath();
-    ctx.moveTo(sx,               sy - (r + 1.2));
-    ctx.lineTo(sx + (r + 1.2) * 0.866, sy + (r + 1.2) * 0.5);
-    ctx.lineTo(sx - (r + 1.2) * 0.866, sy + (r + 1.2) * 0.5);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(0,0,0,0.65)';
-    ctx.fill();
+    c.beginPath();
+    c.moveTo(sx,               sy - (r + 1.2));
+    c.lineTo(sx + (r + 1.2) * 0.866, sy + (r + 1.2) * 0.5);
+    c.lineTo(sx - (r + 1.2) * 0.866, sy + (r + 1.2) * 0.5);
+    c.closePath();
+    c.fillStyle = 'rgba(0,0,0,0.65)';
+    c.fill();
 
     // 本体（陣営色）
-    ctx.beginPath();
-    ctx.moveTo(sx,           sy - r);
-    ctx.lineTo(sx + r * 0.866, sy + r * 0.5);
-    ctx.lineTo(sx - r * 0.866, sy + r * 0.5);
-    ctx.closePath();
-    ctx.fillStyle = f ? f.color : '#888888';
-    ctx.fill();
+    c.beginPath();
+    c.moveTo(sx,           sy - r);
+    c.lineTo(sx + r * 0.866, sy + r * 0.5);
+    c.lineTo(sx - r * 0.866, sy + r * 0.5);
+    c.closePath();
+    c.fillStyle = f ? f.color : '#888888';
+    c.fill();
 
     // 頂点ハイライト
-    ctx.beginPath();
-    ctx.arc(sx, sy - r * 0.5, r * 0.22, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.fill();
+    c.beginPath();
+    c.arc(sx, sy - r * 0.5, r * 0.22, 0, Math.PI * 2);
+    c.fillStyle = 'rgba(255,255,255,0.6)';
+    c.fill();
   }
 
   // ユニット（陣営色の丸）
@@ -240,44 +348,44 @@ function drawFullMap() {
     const sy     = mapY0 + (gr + 0.5) * cellDraw;
     const rep    = group[0];
     const fColor = (FACTIONS[rep.faction] || { color: '#888888' }).color;
-    ctx.beginPath();
-    ctx.arc(sx, sy, 4, 0, Math.PI * 2);
-    ctx.fillStyle = fColor;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    c.beginPath();
+    c.arc(sx, sy, 4, 0, Math.PI * 2);
+    c.fillStyle = fColor;
+    c.fill();
+    c.strokeStyle = 'rgba(0,0,0,0.5)';
+    c.lineWidth = 1;
+    c.stroke();
   }
 
   // プレイヤー: 方向線 → 白丸
   const psx = mapX0 + (player.pos.x / CELL_SIZE) * cellDraw;
   const psy = mapY0 + (player.pos.y / CELL_SIZE) * cellDraw;
-  ctx.beginPath();
-  ctx.moveTo(psx, psy);
-  ctx.lineTo(
+  c.beginPath();
+  c.moveTo(psx, psy);
+  c.lineTo(
     psx + Math.cos(player.visualAngle) * cellDraw * 1.5,
     psy + Math.sin(player.visualAngle) * cellDraw * 1.5
   );
-  ctx.strokeStyle = '#66bbff';
-  ctx.lineWidth   = 2;
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(psx, psy, 5.5, 0, Math.PI * 2);
-  ctx.fillStyle   = '#ffffff';
-  ctx.fill();
-  ctx.strokeStyle = '#0066aa';
-  ctx.lineWidth   = 2;
-  ctx.stroke();
+  c.strokeStyle = '#66bbff';
+  c.lineWidth   = 2;
+  c.stroke();
+  c.beginPath();
+  c.arc(psx, psy, 5.5, 0, Math.PI * 2);
+  c.fillStyle   = '#ffffff';
+  c.fill();
+  c.strokeStyle = '#0066aa';
+  c.lineWidth   = 2;
+  c.stroke();
 
   // ヒントテキスト
-  ctx.fillStyle     = 'rgba(255,255,255,0.8)';
-  ctx.font          = 'bold 13px monospace';
-  ctx.textAlign     = 'center';
-  ctx.textBaseline  = 'bottom';
-  ctx.fillText('全体マップ　[ M ] で閉じる', CANVAS_W / 2, mapY0 - 6);
+  c.fillStyle     = 'rgba(255,255,255,0.8)';
+  c.font          = 'bold 13px monospace';
+  c.textAlign     = 'center';
+  c.textBaseline  = 'bottom';
+  c.fillText('全体マップ　[ M ] で閉じる', CANVAS_W / 2, mapY0 - 6);
 
   // 枠線
-  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-  ctx.lineWidth   = 1;
-  ctx.strokeRect(mapX0, mapY0, mapW, mapH);
+  c.strokeStyle = 'rgba(255,255,255,0.25)';
+  c.lineWidth   = 1;
+  c.strokeRect(mapX0, mapY0, mapW, mapH);
 }

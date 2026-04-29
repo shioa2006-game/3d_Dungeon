@@ -73,7 +73,22 @@
     <div class="result-inner">
       <div class="result-title" id="result-title"></div>
       <div class="result-detail" id="result-detail"></div>
-      <button class="result-restart-btn" onclick="newMaze()">🔄 もう一度プレイ [R]</button>
+      <button class="result-restart-btn" onclick="showRestartConfirm()">🔄 もう一度プレイ [R]</button>
+    </div>
+  </div>
+
+  <!-- 全体マップ専用キャンバス（最前面 z-index:50） -->
+  <canvas id="fullmap-c" hidden></canvas>
+
+  <!-- リセット確認ダイアログ（z-index:60） -->
+  <div id="restart-confirm" hidden>
+    <div class="restart-confirm-inner">
+      <div class="restart-confirm-title">ゲームをリセットしますか？</div>
+      <div class="restart-confirm-hint">現在のゲームの進行は失われます</div>
+      <div class="restart-confirm-btns">
+        <button class="restart-confirm-btn yes" onclick="confirmRestart()">はい [Y]</button>
+        <button class="restart-confirm-btn no"  onclick="cancelRestartConfirm()">いいえ [N]</button>
+      </div>
     </div>
   </div>
 

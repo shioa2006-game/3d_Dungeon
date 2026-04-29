@@ -6,7 +6,15 @@ window.addEventListener('keydown', e => {
   keys[e.code] = true;
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code))
     e.preventDefault();
-  if (e.code === 'KeyR' && !battleState && !shopItems) newMaze();
+
+  // リセット確認ダイアログが開いている間は Y/N/Escape のみ受け付ける
+  if (restartConfirmOpen) {
+    if (e.code === 'KeyY' || e.code === 'Enter') { confirmRestart(); return; }
+    if (e.code === 'KeyN' || e.code === 'Escape') { cancelRestartConfirm(); return; }
+    return;  // 他のキーはすべて無視
+  }
+
+  if (e.code === 'KeyR' && !battleState && !shopItems) showRestartConfirm();
   if (e.code === 'KeyM') toggleFullMap();
   if (e.code === 'Escape' && fullMapOpen) toggleFullMap();
 });

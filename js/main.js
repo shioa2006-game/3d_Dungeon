@@ -32,6 +32,26 @@ function generateMazeUntilValid() {
 }
 
 // =====================
+// リセット確認ダイアログ
+// =====================
+let restartConfirmOpen = false;
+
+function showRestartConfirm() {
+  restartConfirmOpen = true;
+  document.getElementById('restart-confirm').hidden = false;
+}
+
+function cancelRestartConfirm() {
+  restartConfirmOpen = false;
+  document.getElementById('restart-confirm').hidden = true;
+}
+
+function confirmRestart() {
+  cancelRestartConfirm();
+  newMaze();
+}
+
+// =====================
 // 新規迷路生成 / リスタート（R キー・リスタートボタンで呼び出し）
 // =====================
 function newMaze() {
@@ -43,9 +63,12 @@ function newMaze() {
   onCrystal           = null;
   worldTurn           = 0;
   messageLog.length   = 0;
-  document.getElementById('battle-panel').hidden = true;
-  document.getElementById('shop-modal').hidden   = true;
-  document.getElementById('result-screen').hidden = true;
+  fullMapOpen         = false;
+  restartConfirmOpen  = false;
+  document.getElementById('battle-panel').hidden    = true;
+  document.getElementById('shop-modal').hidden      = true;
+  document.getElementById('result-screen').hidden   = true;
+  document.getElementById('restart-confirm').hidden = true;
 
   generateMazeUntilValid();   // grid/walls/crystals を一括確定（initCrystals 内包）
 

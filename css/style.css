@@ -19,21 +19,29 @@
 }
 
 #battle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
   font-size: 15px;
   color: #ffcc44;
   font-weight: bold;
-  padding-bottom: 7px;
+  padding-bottom: 6px;
   border-bottom: 1px solid #2a2a3a;
-  margin-bottom: 7px;
+  margin-bottom: 6px;
   flex-shrink: 0;
+}
+
+.battle-counts {
+  font-size: 12px;
+  color: #99aacc;
+  font-weight: normal;
 }
 
 #battle-main {
   display: flex;
   gap: 10px;
-  flex: 1;
+  flex: 0 0 220px;
   overflow: hidden;
-  min-height: 0;
 }
 
 .battle-side {
@@ -44,29 +52,52 @@
   min-width: 0;
 }
 
-.battle-side-title { display: none; }
+.battle-side-label {
+  font-size: 11px;
+  color: #889;
+  padding: 0 2px 4px;
+  letter-spacing: 1px;
+}
 
 #battle-enemy-list,
 #battle-ally-list {
-  overflow-y: auto;
+  overflow-y: hidden;
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ユニットカード */
 .battle-unit {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 4px 6px;
+  gap: 6px;
+  padding: 2px 5px;
   border: 1px solid #2a2a3a;
   border-radius: 3px;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   background: #0e0e18;
+  height: 38px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.unit-sprite {
+  width: 32px !important;
+  height: 32px !important;
 }
 
 .battle-unit.dead {
   opacity: 0.3;
   text-decoration: line-through;
+}
+
+/* 空きスロット（グレーの空白カード） */
+.battle-unit.empty {
+  background: #15151f;
+  border: 1px dashed #3a3a52;
+  pointer-events: none;
 }
 
 .battle-unit.target-btn {
@@ -81,6 +112,26 @@
 .battle-unit.selected {
   border-color: #ff5555;
   background: #2a0808;
+  box-shadow: 0 0 8px rgba(255, 80, 80, 0.55);
+  animation: targetPulse 1.4s ease-in-out infinite;
+}
+
+/* 選択カード：右端にターゲットマーカー */
+.battle-unit.selected::before {
+  content: '◀';
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ff9988;
+  font-size: 18px;
+  text-shadow: 0 0 6px rgba(255,100,80,0.9);
+  pointer-events: none;
+}
+
+@keyframes targetPulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(255, 80, 80, 0.45); }
+  50%      { box-shadow: 0 0 12px rgba(255, 100, 80, 0.85); }
 }
 
 .battle-unit.player {
@@ -126,20 +177,50 @@
   border-radius: 2px;
 }
 
-/* プロンプト行 */
-#battle-prompt {
-  font-size: 11px;
-  color: #ffcc44;
-  padding: 5px 0;
-  text-align: center;
+/* 行動情報欄 */
+#battle-action-info {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 6px;
+  padding: 6px 8px;
+  background: #0d0d18;
+  border: 1px solid #2a2a3a;
+  border-radius: 3px;
   flex-shrink: 0;
+}
+
+#battle-action-info .ai-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+#battle-action-info .ai-label {
+  font-size: 10px;
+  color: #6677aa;
+  letter-spacing: 1px;
+}
+
+#battle-action-info .ai-value {
+  font-size: 13px;
+  color: #ddddee;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#battle-action-info .ai-value.ai-dmg {
+  color: #ffcc44;
 }
 
 /* コマンドボタン */
 #battle-actions {
   display: flex;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   flex-shrink: 0;
 }
 
@@ -153,6 +234,11 @@
   font-family: monospace;
   font-size: 13px;
   border-radius: 3px;
+  transition: opacity 0.15s ease;
+}
+
+.battle-btn:not(.kb-selected):not(:hover) {
+  opacity: 0.5;
 }
 
 .battle-btn:disabled {
@@ -173,16 +259,25 @@
   box-shadow: inset 0 0 0 1px #5577cc;
 }
 
+/* 操作ヒント */
+#battle-hint {
+  font-size: 10px;
+  color: #667;
+  text-align: center;
+  padding: 2px 0 4px;
+  flex-shrink: 0;
+}
+
 /* バトルログ */
 #battle-log {
-  height: 90px;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  overflow-y: hidden;
   background: #060610;
   border: 1px solid #1a1a28;
   padding: 3px 8px;
   font-size: 10px;
   border-radius: 3px;
-  flex-shrink: 0;
 }
 
 #battle-log p {

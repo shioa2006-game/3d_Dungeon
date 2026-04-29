@@ -185,7 +185,7 @@ const FLEE_BASE   = 0.5;
 function goldDrop() { return 10 + Math.floor(Math.random() * 11); }
 
 const UNIT_NAMES = {
-  human: '兵士', elf: 'エルフ', dwarf: 'ドワーフ',
+  human: '人間', elf: 'エルフ', dwarf: 'ドワーフ',
   goblin: 'ゴブリン', lizard: 'リザード', ogre: 'オーガ',
 };
 

@@ -22,14 +22,14 @@ function updateOnCrystal() {
 function healAtCrystal() {
   if (!onCrystal || battleState || shopItems || gameEnded) return;
   if (!onCrystal.valid) {
-    logMessage('⚠️ このクリスタルは本拠地から切断されています');
+    logMessage('⚠️ このクリスタルは本拠地から切断されています', 'system');
     return;
   }
   const s   = playerStats();
   const old = player.hp;
   player.hp = Math.min(s.hp, player.hp + s.rec);
   const gained = Math.ceil(player.hp - old);
-  logMessage(`💎 クリスタルで回復 +${gained} HP (${Math.ceil(player.hp)}/${s.hp})`);
+  logMessage(`💎 クリスタルで回復 +${gained} HP (${Math.ceil(player.hp)}/${s.hp})`, 'reward');
   triggerMonsterTurn(player.gridR, player.gridC);
 }
 
@@ -39,7 +39,7 @@ function healAtCrystal() {
 function openShop() {
   if (!onCrystal || battleState || shopItems || gameEnded) return;
   if (!onCrystal.valid) {
-    logMessage('⚠️ このクリスタルは本拠地から切断されています');
+    logMessage('⚠️ このクリスタルは本拠地から切断されています', 'system');
     return;
   }
   const pool  = shuffle([...SHOP_POOL]);
@@ -89,7 +89,7 @@ function buyItem(idx) {
   player.equip[item.slot] = item;
   const s = playerStats();
   if (player.hp > s.hp) player.hp = s.hp;
-  logMessage(`🛒 ${item.name} 購入 (-${net}G)`);
+  logMessage(`🛒 ${item.name} 購入 (-${net}G)`, 'reward');
   closeShop();
   triggerMonsterTurn(player.gridR, player.gridC);
 }

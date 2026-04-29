@@ -99,12 +99,12 @@ function drawMinimap() {
       if (outOfBounds) {
         fillRect(sx, sy, cellDraw + 1, cellDraw + 1, 6, 6, 6);
       } else if (grid[gr][gc] === 1) {
-        fillRect(sx, sy, cellDraw + 1, cellDraw + 1, 105, 135, 125);
+        fillRect(sx, sy, cellDraw + 1, cellDraw + 1, 45, 55, 52);
       } else {
         fillRect(sx, sy, cellDraw + 1, cellDraw + 1, 18, 18, 18);
         const faction = getFactionForCell(gr, gc);
         if (faction) {
-          ctx.fillStyle = faction.color + '55';
+          ctx.fillStyle = faction.color + '6e';
           ctx.fillRect(sx, sy, cellDraw + 1, cellDraw + 1);
         }
       }

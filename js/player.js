@@ -102,7 +102,7 @@ function checkCrystalClaim() {
   cr.spawnTimer = 0;
   updateCrystalConnectivity();   // 連結判定を再計算
   updateOnCrystal();
-  logMessage(`💎 クリスタルを人間族に転換！`);
+  logMessage(`💎 クリスタルを人間族に転換！`, 'occupy');
   checkWinLoss();
 }
 

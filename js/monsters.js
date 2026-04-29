@@ -170,7 +170,7 @@ function updateTerritoryAI(foughtThisTurn) {
         m.targetCrystal = randomEnemyCrystal(m);
         m.targetRefreshTimer = 0;
         if (prevOwner === 'human') {
-          logMessage(`💥 人間族クリスタルが${FACTIONS[m.faction].name}に占領された！`);
+          logMessage(`💥 人間族クリスタルが${FACTIONS[m.faction].name}に占領された！`, 'occupy');
         }
         checkWinLoss();
       }
@@ -416,7 +416,7 @@ function checkMonsterBumpPlayer() {
     if (!m.aggroed || m.hp <= 0 || m.battleLocked) continue;
     const dist = Math.abs(m.gridR - player.gridR) + Math.abs(m.gridC - player.gridC);
     if (dist === 1) {
-      logMessage(`⚔ ${FACTIONS[m.faction].name}が襲いかかってきた！`);
+      logMessage(`⚔ ${FACTIONS[m.faction].name}が襲いかかってきた！`, 'battle');
       startBattle(m);
       return;
     }

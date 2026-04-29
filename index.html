@@ -28,23 +28,30 @@
   <!-- Battle Panel（3Dビュー領域 740×500px に重ねる） -->
   <div id="battle-panel" hidden>
     <div id="battle-header">
-      ⚔ 戦闘 — <span id="battle-enemy-name"></span>
+      <span class="battle-title">⚔ 戦闘 — <span id="battle-enemy-name"></span></span>
+      <span id="battle-counts" class="battle-counts"></span>
     </div>
     <div id="battle-main">
       <div class="battle-side">
-        <div class="battle-side-title">敵</div>
+        <div class="battle-side-label">敵部隊</div>
         <div id="battle-enemy-list"></div>
       </div>
       <div class="battle-side">
-        <div class="battle-side-title">味方（人間族）</div>
+        <div class="battle-side-label">味方部隊</div>
         <div id="battle-ally-list"></div>
       </div>
     </div>
-    <div id="battle-prompt"></div>
+    <div id="battle-action-info">
+      <div class="ai-field"><span class="ai-label">対象</span><span id="battle-info-target" class="ai-value">—</span></div>
+      <div class="ai-field"><span class="ai-label">コマンド</span><span id="battle-info-cmd" class="ai-value">戦う</span></div>
+      <div class="ai-field"><span class="ai-label">予測ダメージ</span><span id="battle-info-dmg" class="ai-value ai-dmg">—</span></div>
+      <div class="ai-field"><span class="ai-label">相性</span><span id="battle-info-affin" class="ai-value">—</span></div>
+    </div>
     <div id="battle-actions">
       <button class="battle-btn" id="btn-fight">⚔ 戦う</button>
       <button class="battle-btn" id="btn-flee">🏃 逃げる</button>
     </div>
+    <div id="battle-hint">←→ コマンド切替　/　↑↓ 対象選択　/　Enter 決定</div>
     <div id="battle-log"></div>
   </div>
 

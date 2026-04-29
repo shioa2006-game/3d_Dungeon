@@ -50,80 +50,113 @@ function startBattle(contactEnemy) {
 // =====================
 // バトル画面描画
 // =====================
+const BATTLE_SLOTS = 5;
+
+function _renderUnitCard(unit, opts) {
+  // unit: monster object or { isPlayer: true } or null（空きスロット）
+  if (!unit) {
+    return `<div class="battle-unit empty"><div class="unit-info"></div></div>`;
+  }
+  if (unit.isPlayer) {
+    const s        = playerStats();
+    const pHp      = Math.max(0, Math.ceil(player.hp));
+    const pHpPct   = Math.round(pHp / s.hp * 100);
+    const pHpColor = pHpPct > 50 ? '#44cc44' : pHpPct > 25 ? '#cccc44' : '#cc4444';
+    return `<div class="battle-unit player">
+      <canvas class="unit-sprite" width="48" height="48"
+        data-type="player" data-hp="${pHp}" data-maxhp="${s.hp}"></canvas>
+      <div class="unit-info">
+        <div class="unit-name">プレイヤー</div>
+        <div class="unit-stats">HP ${pHp}/${s.hp}　ATK ${playerAtkVs(battleState.enemyRace)}</div>
+        <div class="unit-hpbar">
+          <div class="unit-hpbar-fill" style="width:${pHpPct}%;background:${pHpColor}"></div>
+        </div>
+      </div>
+    </div>`;
+  }
+  const dead     = unit.hp <= 0;
+  const selected = opts.selected && !dead;
+  const hp       = Math.max(0, Math.ceil(unit.hp));
+  const hpPct    = Math.round(hp / unit.maxHp * 100);
+  const hpColor  = hpPct > 50 ? '#44cc44' : hpPct > 25 ? '#cccc44' : '#cc4444';
+  const cls = ['battle-unit',
+    dead ? 'dead' : (opts.targetable ? 'target-btn' : ''),
+    selected ? 'selected' : '',
+  ].filter(Boolean).join(' ');
+  const onclick = !dead && opts.targetable ? `onclick="selectBattleTarget(${opts.idx})"` : '';
+  return `<div class="${cls}" ${onclick}>
+    <canvas class="unit-sprite" width="48" height="48"
+      data-type="${unit.type}" data-hp="${hp}" data-maxhp="${unit.maxHp}"></canvas>
+    <div class="unit-info">
+      <div class="unit-name">${UNIT_NAMES[unit.type] ?? unit.type}</div>
+      <div class="unit-stats">${dead ? '撃破' : `HP ${hp}/${unit.maxHp}　ATK ${unit.atk}`}</div>
+      ${!dead ? `<div class="unit-hpbar">
+        <div class="unit-hpbar-fill" style="width:${hpPct}%;background:${hpColor}"></div>
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
 function renderBattle() {
   if (!battleState) return;
 
   document.getElementById('battle-enemy-name').textContent =
     FACTIONS[battleState.enemyRace].name;
 
-  // 敵リスト
-  const enemyHtml = battleState.enemies.map((e, i) => {
-    const dead     = e.hp <= 0;
-    const selected = !dead && battleState.selectedTarget === i;
-    const hp       = Math.max(0, Math.ceil(e.hp));
-    const hpPct    = Math.round(hp / e.maxHp * 100);
-    const hpColor  = hpPct > 50 ? '#44cc44' : hpPct > 25 ? '#cccc44' : '#cc4444';
-    const cls      = ['battle-unit',
-      dead ? 'dead' : 'target-btn',
-      selected ? 'selected' : '',
-    ].filter(Boolean).join(' ');
-    const onclick = dead ? '' : `onclick="selectBattleTarget(${i})"`;
-    return `<div class="${cls}" ${onclick}>
-      <canvas class="unit-sprite" width="48" height="48"
-        data-type="${e.type}" data-hp="${hp}" data-maxhp="${e.maxHp}"></canvas>
-      <div class="unit-info">
-        <div class="unit-name">${UNIT_NAMES[e.type] ?? e.type}${selected ? ' ◀' : ''}</div>
-        <div class="unit-stats">${dead ? '撃破' : `HP ${hp}/${e.maxHp} ATK ${e.atk}`}</div>
-        ${!dead ? `<div class="unit-hpbar">
-          <div class="unit-hpbar-fill" style="width:${hpPct}%;background:${hpColor}"></div>
-        </div>` : ''}
-      </div>
-    </div>`;
-  }).join('');
+  // 味方/敵 数表示
+  const enemyAlive = battleState.enemies.filter(e => e.hp > 0).length;
+  const allyAlive  = 1 + battleState.allyUnits.filter(a => a.hp > 0).length; // +player
+  const countEl = document.getElementById('battle-counts');
+  if (countEl) countEl.textContent = `味方 ${allyAlive} / 敵 ${enemyAlive}`;
+
+  // 敵リスト：5スロット固定
+  let enemyHtml = '';
+  for (let i = 0; i < BATTLE_SLOTS; i++) {
+    const e = battleState.enemies[i];
+    enemyHtml += _renderUnitCard(e ?? null, {
+      idx: i,
+      selected:   battleState.selectedTarget === i,
+      targetable: true,
+    });
+  }
   document.getElementById('battle-enemy-list').innerHTML = enemyHtml;
 
-  // 味方リスト（プレイヤー先頭）
-  const s          = playerStats();
-  const pHp        = Math.max(0, Math.ceil(player.hp));
-  const pHpPct     = Math.round(pHp / s.hp * 100);
-  const pHpColor   = pHpPct > 50 ? '#44cc44' : pHpPct > 25 ? '#cccc44' : '#cc4444';
-  let allyHtml = `<div class="battle-unit player">
-    <canvas class="unit-sprite" width="48" height="48"
-      data-type="player" data-hp="${pHp}" data-maxhp="${s.hp}"></canvas>
-    <div class="unit-info">
-      <div class="unit-name">プレイヤー</div>
-      <div class="unit-stats">HP ${pHp}/${s.hp} ATK ${playerAtkVs(battleState.enemyRace)}</div>
-      <div class="unit-hpbar">
-        <div class="unit-hpbar-fill" style="width:${pHpPct}%;background:${pHpColor}"></div>
-      </div>
-    </div>
-  </div>`;
-  allyHtml += battleState.allyUnits.map(a => {
-    const dead   = a.hp <= 0;
-    const hp     = Math.max(0, Math.ceil(a.hp));
-    const hpPct  = Math.round(hp / a.maxHp * 100);
-    const hpColor = hpPct > 50 ? '#44cc44' : hpPct > 25 ? '#cccc44' : '#cc4444';
-    return `<div class="battle-unit${dead ? ' dead' : ''}">
-      <canvas class="unit-sprite" width="48" height="48"
-        data-type="${a.type}" data-hp="${hp}" data-maxhp="${a.maxHp}"></canvas>
-      <div class="unit-info">
-        <div class="unit-name">${UNIT_NAMES[a.type] ?? a.type}</div>
-        <div class="unit-stats">${dead ? '撃破' : `HP ${hp}/${a.maxHp} ATK ${a.atk}`}</div>
-        ${!dead ? `<div class="unit-hpbar">
-          <div class="unit-hpbar-fill" style="width:${hpPct}%;background:${hpColor}"></div>
-        </div>` : ''}
-      </div>
-    </div>`;
-  }).join('');
+  // 味方リスト：プレイヤー先頭 + AI 4枠 = 5スロット固定
+  let allyHtml = _renderUnitCard({ isPlayer: true }, {});
+  for (let i = 0; i < BATTLE_SLOTS - 1; i++) {
+    const a = battleState.allyUnits[i];
+    allyHtml += _renderUnitCard(a ?? null, { idx: i, selected: false, targetable: false });
+  }
   document.getElementById('battle-ally-list').innerHTML = allyHtml;
 
-  // プロンプト
-  const cmdName    = battleState.selectedCommand === 0 ? '⚔ 戦う' : '🏃 逃げる';
-  const targetName = battleState.selectedTarget !== null
-    ? `${UNIT_NAMES[battleState.enemies[battleState.selectedTarget]?.type] ?? '?'} を選択中`
-    : '敵未選択';
-  document.getElementById('battle-prompt').textContent =
-    `► ${targetName}　[${cmdName}]　←→コマンド / ↑↓ターゲット / Enter実行`;
+  // ── 行動情報欄 ──
+  const target = battleState.selectedTarget !== null
+    ? battleState.enemies[battleState.selectedTarget]
+    : null;
+  const isFlee   = battleState.selectedCommand === 1;
+  const cmdLabel = isFlee ? '逃げる' : '戦う';
+  let targetText  = '—';
+  let dmgText     = '—';
+  let affinText   = '—';
+  if (!isFlee && target && target.hp > 0) {
+    targetText = UNIT_NAMES[target.type] ?? target.type;
+    dmgText    = String(playerAtkVs(target.type));
+    affinText  = AFFINITY_DEBUFF.has(`human-${target.type}`) ? '相性不利 ×0.7' : '通常';
+  } else if (isFlee) {
+    const { agi } = playerStats();
+    const chance  = Math.min(0.95, Math.max(0.1, FLEE_BASE + (agi - 10) * 0.02));
+    targetText = '—';
+    dmgText    = `成功率 ${Math.round(chance * 100)}%`;
+    affinText  = '—';
+  }
+  const setField = (id, txt) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  };
+  setField('battle-info-target', targetText);
+  setField('battle-info-cmd',    cmdLabel);
+  setField('battle-info-dmg',    dmgText);
+  setField('battle-info-affin',  affinText);
 
   // ボタン状態
   const fightBtn = document.getElementById('btn-fight');
@@ -296,23 +329,23 @@ function endBattle(result) {
   updateOnCrystal();
 
   if (result === 'dead') {
-    logMessage('💀 死亡... ゴールド半減、拠点に転送');
+    logMessage('💀 死亡... ゴールド半減、拠点に転送', 'battle');
     playerDeath(killerRace);
     checkWinLoss();
     return;
   }
 
   if (result === 'win') {
-    logMessage('⚔ 戦闘勝利！');
+    logMessage('⚔ 戦闘勝利！', 'battle');
     const cr = crystals.find(c =>
       c.r === player.gridR && c.c === player.gridC && c.owner !== 'human'
     );
     if (cr) {
       cr.owner = 'human'; cr.spawnTimer = 0;
-      logMessage(`💎 クリスタルを占領！`);
+      logMessage(`💎 クリスタルを占領！`, 'occupy');
     }
   } else if (result === 'flee') {
-    logMessage('🏃 逃走成功');
+    logMessage('🏃 逃走成功', 'battle');
   }
 
   checkWinLoss();
@@ -327,7 +360,7 @@ function playerDeath(killerRace) {
     // 最後の1拠点 → 敵に陥落させて敗北判定に委ねる
     humanCrystals[0].owner      = killerRace;
     humanCrystals[0].spawnTimer = 0;
-    logMessage(`💥 最後の人間族クリスタルが${FACTIONS[killerRace].name}に陥落！`);
+    logMessage(`💥 最後の人間族クリスタルが${FACTIONS[killerRace].name}に陥落！`, 'occupy');
     return;
   }
   player.gold = Math.floor(player.gold / 2);
@@ -364,7 +397,7 @@ function showResult(kind, detail) {
   title.className   = 'result-title ' + (kind === 'win' ? 'result-win' : 'result-lose');
   document.getElementById('result-detail').textContent = `${detail}（${worldTurn} ターン）`;
   document.getElementById('result-screen').hidden = false;
-  logMessage(kind === 'win' ? '🎉 VICTORY！' : '💀 DEFEAT...');
+  logMessage(kind === 'win' ? '🎉 VICTORY！' : '💀 DEFEAT...', 'system');
 }
 
 // =====================

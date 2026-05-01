@@ -8,33 +8,34 @@ window.addEventListener('keydown', e => {
     e.preventDefault();
 
   // リセット確認ダイアログが開いている間は Y/N/Escape のみ受け付ける
-  if (restartConfirmOpen) {
+  if (Game.flags.restartConfirmOpen) {
     if (e.code === 'KeyY' || e.code === 'Enter') { confirmRestart(); return; }
     if (e.code === 'KeyN' || e.code === 'Escape') { cancelRestartConfirm(); return; }
     return;  // 他のキーはすべて無視
   }
 
-  if (e.code === 'KeyR' && !battleState && !shopItems) showRestartConfirm();
+  if (e.code === 'KeyR' && !Game.state.battleState && !Game.state.shopItems) showRestartConfirm();
   if (e.code === 'KeyM') toggleFullMap();
-  if (e.code === 'Escape' && fullMapOpen) toggleFullMap();
+  if (e.code === 'Escape' && Game.flags.fullMapOpen) toggleFullMap();
 });
 
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
 function handleInput() {
-  if (gameEnded) return;
+  if (Game.flags.gameEnded) return;
 
-  if (shopItems) {
+  if (Game.state.shopItems) {
     _handleShopInput();
     return;
   }
 
-  if (battleState) {
-    if (!monstersAnimating) _handleBattleInput();
+  if (Game.state.battleState) {
+    if (!Game.flags.monstersAnimating) _handleBattleInput();
     return;
   }
 
-  if (player.moving || monstersAnimating) return;
+  const player = Game.state.player;
+  if (player.moving || Game.flags.monstersAnimating) return;
 
   if (keysJustPressed.has('ArrowLeft')  || keysJustPressed.has('KeyA')) { startRotate(-1); return; }
   if (keysJustPressed.has('ArrowRight') || keysJustPressed.has('KeyD')) { startRotate( 1); return; }
@@ -43,7 +44,7 @@ function handleInput() {
   if (keys['KeyS'] || keys['ArrowDown']) { startMove((player.facing + 2) % 4); return; }
 
   // Q/E: クリスタル上なら回復・ショップ、それ以外はストレーフ
-  if (onCrystal) {
+  if (Game.state.onCrystal) {
     if (keysJustPressed.has('KeyQ')) { healAtCrystal(); return; }
     if (keysJustPressed.has('KeyE')) { openShop(); return; }
   } else {
@@ -53,20 +54,22 @@ function handleInput() {
 }
 
 function _handleShopInput() {
+  const shopItems = Game.state.shopItems;
   if (!shopItems) return;
   if (keysJustPressed.has('ArrowUp')) {
-    shopSelectedIdx = Math.max(0, shopSelectedIdx - 1);
+    Game.state.shopSelectedIdx = Math.max(0, Game.state.shopSelectedIdx - 1);
     renderShop(); return;
   }
   if (keysJustPressed.has('ArrowDown')) {
-    shopSelectedIdx = Math.min(shopItems.length - 1, shopSelectedIdx + 1);
+    Game.state.shopSelectedIdx = Math.min(shopItems.length - 1, Game.state.shopSelectedIdx + 1);
     renderShop(); return;
   }
-  if (keysJustPressed.has('Enter')) { buyItem(shopSelectedIdx); return; }
+  if (keysJustPressed.has('Enter')) { buyItem(Game.state.shopSelectedIdx); return; }
   if (keysJustPressed.has('Escape')) { closeShop(); return; }
 }
 
 function _handleBattleInput() {
+  const battleState = Game.state.battleState;
   if (!battleState) return;
   const live = battleState.enemies
     .map((e, i) => e.hp > 0 ? i : -1).filter(i => i >= 0);

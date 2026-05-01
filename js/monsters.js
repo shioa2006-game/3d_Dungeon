@@ -1,7 +1,3 @@
-let monsters = [];
-let monstersAnimating = false;
-let pendingBumpCheck  = false;
-
 function facingFromMove(fromR, fromC, toR, toC) {
   const dr = toR - fromR, dc = toC - fromC;
   if (dr === -1) return 0;
@@ -13,6 +9,12 @@ function facingFromMove(fromR, fromC, toR, toC) {
 // =====================
 // ユニット生成（6 種族共通）
 // =====================
+/**
+ * @param {'human'|'elf'|'dwarf'|'goblin'|'lizard'|'ogre'} type
+ * @param {number} r
+ * @param {number} c
+ * @returns {Monster}
+ */
 function makeUnit(type, r, c) {
   const d   = UNIT_DEFS[type];
   const pos = new Vec2((c + 0.5) * CELL_SIZE, (r + 0.5) * CELL_SIZE);
@@ -45,12 +47,12 @@ function makeUnit(type, r, c) {
 
 // 初期スポーン：各 AI 陣営のクリスタル近くに 1 体ずつ
 function spawnMonsters() {
-  monsters = [];
+  Game.state.monsters = [];
   for (const [owner, type] of Object.entries(AI_UNIT)) {
-    const fCrystals = crystals.filter(c => c.owner === owner);
+    const fCrystals = Game.state.crystals.filter(c => c.owner === owner);
     if (fCrystals.length === 0) continue;
     const cr = fCrystals[Math.floor(Math.random() * fCrystals.length)];
-    monsters.push(makeUnit(type, cr.r, cr.c));
+    Game.state.monsters.push(makeUnit(type, cr.r, cr.c));
   }
 }
 
@@ -59,7 +61,7 @@ function spawnMonsters() {
 // =====================
 function nearestFriendlyCrystal(m) {
   let best = null, bestDist = Infinity;
-  for (const cr of crystals) {
+  for (const cr of Game.state.crystals) {
     if (cr.owner !== m.faction || !cr.valid) continue;  // 飛び地は撤退先にしない
     const d = Math.abs(cr.r - m.gridR) + Math.abs(cr.c - m.gridC);
     if (d < bestDist) { bestDist = d; best = cr; }
@@ -68,6 +70,7 @@ function nearestFriendlyCrystal(m) {
 }
 
 function randomEnemyCrystal(m) {
+  const crystals = Game.state.crystals;
   const candidates = crystals.filter(cr => cr.owner !== m.faction);
   if (candidates.length === 0) return null;
 
@@ -87,7 +90,7 @@ function randomEnemyCrystal(m) {
 
   // 同陣営で各クリスタルを狙っているユニット数を集計（集中ペナルティ用）
   const targetCount = new Map();
-  for (const other of monsters) {
+  for (const other of Game.state.monsters) {
     if (other === m || other.faction !== m.faction || !other.targetCrystal) continue;
     const key = `${other.targetCrystal.r},${other.targetCrystal.c}`;
     targetCount.set(key, (targetCount.get(key) || 0) + 1);
@@ -115,7 +118,7 @@ function randomEnemyCrystal(m) {
 // playtest.html の updateUnits() を移植
 // =====================
 function updateTerritoryAI(foughtThisTurn) {
-  for (const m of monsters) {
+  for (const m of Game.state.monsters) {
     if (foughtThisTurn.has(m)) { m.healing = false; continue; }
 
     // ── 回復中 ──
@@ -158,7 +161,7 @@ function updateTerritoryAI(foughtThisTurn) {
 
     // ── 敵クリスタル踏んで奪取 ──
     if (!m.retreating && !m.healing) {
-      const cr = crystalAtCell[m.gridR][m.gridC];
+      const cr = Game.state.crystalAtCell[m.gridR][m.gridC];
       if (cr && cr.owner !== m.faction) {
         const prevOwner = cr.owner;
         cr.owner = m.faction;
@@ -198,7 +201,7 @@ function updateTerritoryAI(foughtThisTurn) {
       const nav = m.retreating
         ? m.retreatTarget
         : (m.targetCrystal ?? randomEnemyCrystal(m));
-      m.path = nav ? bfsPath(grid, m.gridR, m.gridC, nav.r, nav.c) : [];
+      m.path = nav ? bfsPath(Game.state.grid, m.gridR, m.gridC, nav.r, nav.c) : [];
       if (!m.targetCrystal && !m.retreating) m.targetCrystal = randomEnemyCrystal(m);
     }
   }
@@ -208,6 +211,7 @@ function updateTerritoryAI(foughtThisTurn) {
 // 移動先選択
 // =====================
 function pickWanderTargetTurn(m, reserved) {
+  const grid = Game.state.grid;
   const tryOrder = [
     (m.facing - 1 + 4) % 4, m.facing,
     (m.facing + 1) % 4, (m.facing + 2) % 4,
@@ -228,7 +232,7 @@ function pickTerritoryMoveTurn(m, reserved) {
 
   if (m.path.length > 0) {
     const next = m.path[0];
-    if (grid[next.r]?.[next.c] === 0 && !reserved.has(`${next.r},${next.c}`)) {
+    if (Game.state.grid[next.r]?.[next.c] === 0 && !reserved.has(`${next.r},${next.c}`)) {
       m.path.shift();
       return { r: next.r, c: next.c };
     }
@@ -242,20 +246,28 @@ function pickTerritoryMoveTurn(m, reserved) {
 // =====================
 // メインターン処理
 // =====================
+/**
+ * 1ワールドターン進める。AI vs AI 戦闘 → 領土AI → 移動先決定 →
+ * スワップ衝突解決 → 移動適用 → クリスタルスポーン、の順で処理する。
+ *
+ * @param {number} pDestR  プレイヤー目的地行（モンスターが避けるべきセル）
+ * @param {number} pDestC
+ * @param {boolean} [skipAnimation=false]  即時に位置を確定（バトル中など）
+ */
 function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
-  worldTurn++;
+  Game.state.worldTurn++;
   const reserved = new Set([`${pDestR},${pDestC}`]);
 
   // ① 各ユニットのターゲットをリセット
-  for (const m of monsters) {
+  for (const m of Game.state.monsters) {
     m.targetR = -1; m.targetC = -1;
   }
 
   // ② AI vs AI 戦闘（同一セル・異陣営）
   const foughtThisTurn = new Set();
-  for (const m of monsters) {
+  for (const m of Game.state.monsters) {
     if (m.hp <= 0 || m.battleLocked) continue;
-    for (const e of monsters) {
+    for (const e of Game.state.monsters) {
       if (e === m || e.hp <= 0 || e.faction === m.faction || e.battleLocked) continue;
       if (e.gridR !== m.gridR || e.gridC !== m.gridC) continue;
       e.hp -= m.atk * getAffinityMult(m.type, e.type);
@@ -264,13 +276,13 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
     }
   }
   // 死亡ユニット除去
-  monsters = monsters.filter(m => m.hp > 0);
+  Game.state.monsters = Game.state.monsters.filter(m => m.hp > 0);
 
   // ③ 陣営 AI 状態更新（回復・退却・クリスタル奪取・パス計算）
   updateTerritoryAI(foughtThisTurn);
 
   // ④ 移動先を決定
-  for (const m of monsters) {
+  for (const m of Game.state.monsters) {
     if (m.battleLocked) {
       reserved.add(`${m.gridR},${m.gridC}`);
       continue;
@@ -287,7 +299,7 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
         const dist = Math.abs(m.gridR - pDestR) + Math.abs(m.gridC - pDestC);
         if (dist <= aggroRange) {
           m.aggroed = true;
-          const pathToPlayer = bfsPath(grid, m.gridR, m.gridC, pDestR, pDestC);
+          const pathToPlayer = bfsPath(Game.state.grid, m.gridR, m.gridC, pDestR, pDestC);
           if (pathToPlayer.length > 0) {
             const step = pathToPlayer[0];
             if (!reserved.has(`${step.r},${step.c}`)) {
@@ -313,6 +325,7 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
   // ④-b スワップ衝突検出
   // A→Bの現在マス、B→Aの現在マス という位置交換を検出し、
   // 異陣営なら戦闘させて両者の移動をキャンセルする。
+  const monsters = Game.state.monsters;
   for (let i = 0; i < monsters.length; i++) {
     const a = monsters[i];
     if (a.targetR < 0) continue;
@@ -330,11 +343,11 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
       }
     }
   }
-  monsters = monsters.filter(m => m.hp > 0);
+  Game.state.monsters = Game.state.monsters.filter(m => m.hp > 0);
 
   // ⑤ 移動適用（即時 or アニメーション）
   if (skipAnimation) {
-    for (const m of monsters) {
+    for (const m of Game.state.monsters) {
       if (m.targetR < 0) continue;
       m.facing  = facingFromMove(m.gridR, m.gridC, m.targetR, m.targetC);
       m.gridR   = m.targetR;  m.gridC   = m.targetC;
@@ -343,10 +356,10 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
       m.targetR = -1;         m.targetC = -1;
       m.moving  = false;
     }
-    monstersAnimating = false;
+    Game.flags.monstersAnimating = false;
   } else {
     let anyMoving = false;
-    for (const m of monsters) {
+    for (const m of Game.state.monsters) {
       if (m.targetR < 0) continue;
       m.moveFrom     = new Vec2(m.pos.x, m.pos.y);
       m.moveTo       = new Vec2((m.targetC + 0.5) * CELL_SIZE, (m.targetR + 0.5) * CELL_SIZE);
@@ -354,24 +367,24 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
       m.moving       = true;
       anyMoving      = true;
     }
-    monstersAnimating = anyMoving;
+    Game.flags.monstersAnimating = anyMoving;
   }
 
   // ⑥ クリスタルスポーンタイマー
   updateCrystals();
 
   // 通常移動時のみバンプチェックを予約（バトル中ターンや即時処理では発火しない）
-  if (!skipAnimation) pendingBumpCheck = true;
+  if (!skipAnimation) Game.flags.pendingBumpCheck = true;
 }
 
 // =====================
 // アニメーション更新（毎フレーム）
 // =====================
 function animateMonsters() {
-  if (!monstersAnimating) return;
+  if (!Game.flags.monstersAnimating) return;
 
   let anyStillMoving = false;
-  for (const m of monsters) {
+  for (const m of Game.state.monsters) {
     if (!m.moving) continue;
     m.moveProgress += 1 / MOVE_FRAMES;
     if (m.moveProgress >= 1) {
@@ -389,15 +402,16 @@ function animateMonsters() {
       anyStillMoving = true;
     }
   }
-  monstersAnimating = anyStillMoving;
+  Game.flags.monstersAnimating = anyStillMoving;
 }
 
 // =====================
 // プレイヤー接触チェック（Phase 6 でバトル画面へ）
 // =====================
 function checkMonsterContact() {
-  if (battleState) return;
-  for (const m of monsters) {
+  if (Game.state.battleState) return;
+  const player = Game.state.player;
+  for (const m of Game.state.monsters) {
     if (m.hp > 0 && !m.battleLocked &&
         m.gridR === player.gridR && m.gridC === player.gridC &&
         m.faction !== 'human') {
@@ -409,8 +423,9 @@ function checkMonsterContact() {
 
 // アグロ状態のNPCがプレイヤー隣接マスからバンプ攻撃を仕掛ける
 function checkMonsterBumpPlayer() {
-  if (battleState) return;
-  for (const m of monsters) {
+  if (Game.state.battleState) return;
+  const player = Game.state.player;
+  for (const m of Game.state.monsters) {
     if (!m.aggroed || m.hp <= 0 || m.battleLocked) continue;
     const dist = Math.abs(m.gridR - player.gridR) + Math.abs(m.gridC - player.gridC);
     if (dist === 1) {

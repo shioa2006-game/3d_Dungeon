@@ -9,27 +9,11 @@ canvas.height = CANVAS_H;
 // Wheel（canvas 参照が必要なため main.js で登録）
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
-  if (player.moving || monstersAnimating) return;
+  const player = Game.state.player;
+  if (player.moving || Game.flags.monstersAnimating) return;
   if (e.deltaY < 0) startMove(player.facing);
   else              startMove((player.facing + 2) % 4);
 }, { passive: false });
-
-// =====================
-// World state
-// =====================
-let grid  = generateMaze(GRID_SIZE);
-addLoops(grid, LOOP_COUNT, GRID_SIZE);
-let walls = gridToWalls(grid);
-
-// ブロック全 25 個に通路セルが存在することを保証する再生成ヘルパー
-function generateMazeUntilValid() {
-  while (true) {
-    grid  = generateMaze(GRID_SIZE);
-    addLoops(grid, LOOP_COUNT, GRID_SIZE);
-    walls = gridToWalls(grid);
-    if (initCrystals()) break;   // 全ブロックに通路あり → 成功
-  }
-}
 
 // =====================
 // 静的UI要素のクリックハンドラ
@@ -42,15 +26,13 @@ document.getElementById('btn-restart-no')   .addEventListener('click', () => can
 // =====================
 // リセット確認ダイアログ
 // =====================
-let restartConfirmOpen = false;
-
 function showRestartConfirm() {
-  restartConfirmOpen = true;
+  Game.flags.restartConfirmOpen = true;
   document.getElementById('restart-confirm').hidden = false;
 }
 
 function cancelRestartConfirm() {
-  restartConfirmOpen = false;
+  Game.flags.restartConfirmOpen = false;
   document.getElementById('restart-confirm').hidden = true;
 }
 
@@ -60,19 +42,43 @@ function confirmRestart() {
 }
 
 // =====================
+// World 初期化
+// =====================
+function _setWalls(walls) {
+  Game.state.walls  = walls;
+  // 水平/垂直に分割しておくと castRays が方向半カットを使える
+  Game.state.wallsH = walls.filter(w => w.a.y === w.b.y);
+  Game.state.wallsV = walls.filter(w => w.a.x === w.b.x);
+}
+
+Game.state.grid = generateMaze(GRID_SIZE);
+addLoops(Game.state.grid, LOOP_COUNT, GRID_SIZE);
+_setWalls(gridToWalls(Game.state.grid));
+
+// ブロック全 25 個に通路セルが存在することを保証する再生成ヘルパー
+function generateMazeUntilValid() {
+  while (true) {
+    Game.state.grid = generateMaze(GRID_SIZE);
+    addLoops(Game.state.grid, LOOP_COUNT, GRID_SIZE);
+    _setWalls(gridToWalls(Game.state.grid));
+    if (initCrystals()) break;   // 全ブロックに通路あり → 成功
+  }
+}
+
+// =====================
 // 新規迷路生成 / リスタート（R キー・リスタートボタンで呼び出し）
 // =====================
 function newMaze() {
   // 全モーダルを閉じる
-  gameEnded           = false;
-  battleState         = null;
-  battleNeedsRerender = false;
-  shopItems           = null;
-  onCrystal           = null;
-  worldTurn           = 0;
-  messageLog.length   = 0;
-  fullMapOpen         = false;
-  restartConfirmOpen  = false;
+  Game.flags.gameEnded           = false;
+  Game.state.battleState         = null;
+  Game.flags.battleNeedsRerender = false;
+  Game.state.shopItems           = null;
+  Game.state.onCrystal           = null;
+  Game.state.worldTurn           = 0;
+  Game.state.messageLog.length   = 0;
+  Game.flags.fullMapOpen         = false;
+  Game.flags.restartConfirmOpen  = false;
   document.getElementById('battle-panel').hidden    = true;
   document.getElementById('shop-modal').hidden      = true;
   document.getElementById('result-screen').hidden   = true;
@@ -80,6 +86,7 @@ function newMaze() {
 
   generateMazeUntilValid();   // grid/walls/crystals を一括確定（initCrystals 内包）
 
+  const player = Game.state.player;
   player.gridR  = 1; player.gridC  = 1; player.facing = 1;
   player.pos    = new Vec2(1.5 * CELL_SIZE, 1.5 * CELL_SIZE);
   player.angle  = FACING_ANGLES[1];
@@ -113,18 +120,19 @@ function gameLoop() {
   animateMonsters();
 
   // NPCアグロバンプ：プレイヤーとモンスター両方のアニメーションが完了したタイミングで発火
-  if (pendingBumpCheck && !player.moving && !monstersAnimating && !battleState && !gameEnded) {
-    pendingBumpCheck = false;
+  if (Game.flags.pendingBumpCheck && !Game.state.player.moving &&
+      !Game.flags.monstersAnimating && !Game.state.battleState && !Game.flags.gameEnded) {
+    Game.flags.pendingBumpCheck = false;
     checkMonsterBumpPlayer();
   }
 
   // Q3b: アニメーション完了後にバトル画面を再描画
-  if (battleNeedsRerender && !monstersAnimating) {
-    battleNeedsRerender = false;
-    if (battleState) renderBattle();
+  if (Game.flags.battleNeedsRerender && !Game.flags.monstersAnimating) {
+    Game.flags.battleNeedsRerender = false;
+    if (Game.state.battleState) renderBattle();
   }
 
-  if (!battleState) {
+  if (!Game.state.battleState) {
     const hits = castRays();
     drawView3D(hits);
     drawCompass();

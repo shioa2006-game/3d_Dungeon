@@ -584,78 +584,9 @@ player.visualAngle += diff * ROT_SPRING_K;  // 例: ROT_SPRING_K = 0.25
 
 ---
 
-## 9. ダンジョン生成アルゴリズム
+## 9. UI改善（メイン画面）
 
-**ラベル：[Phase10後]** | 議論日：2026-04-20 | 起点：Phase 4実装時
-
-### 現状
-
-`index.html` はDFS + パターン駆動のループ追加で迷路を生成している。
-GRID_SIZE=51、LOOP_COUNT=200 の固定パラメータ。
-行き止まりは少ないが、廊下主体の構造になりやすく広い空間（部屋）は生まれない。
-
-> playtest.html との実装差異の詳細は付録を参照
-
-### 課題
-
-- 現状では「廊下主体」の迷路になりやすく、広い空間（部屋）が生まれない
-- 部屋状の空間を作る場合は別アルゴリズム（BSP分割、セルオートマトンなど）の検討が必要
-
-### 決定事項
-
-- **現状の実装（index.html方式）を維持する**
-- 迷路形状の変更（部屋＋廊下構造など）は **Phase 10完了後に検討**
-- Phase 10後の検討候補：
-  - BSP（二分空間分割）で部屋を先に作り廊下でつなぐ
-  - 現アルゴリズムに「部屋彫り」パスを追加する
-  - LOOP_COUNT の調整で開放感を増す（低コスト案）
-
----
-
-## 付録：playtest.html vs index.html ダンジョン生成の差異
-
-| 項目 | playtest.html | index.html |
-|------|------|------|
-| 迷路生成 | 反復DFS（スタック）| 再帰DFS |
-| 配列型 | Uint8Array | 通常のArray |
-| ループ追加方式 | ランダム2000回試行 ＋ 3パスクリーンアップ | パターン駆動・単一パス |
-| ループ品質 | 無効除去が混入しうる | 全除去が有効な分岐になる |
-| マップ表現 | grid[r][c] = 0/1 をそのまま使用 | Segmentオブジェクト（始点・終点・RGB）に変換 |
-| 経路探索 | BFS（Map + [r,c]タプル） | BFS（Set + {r,c}オブジェクト） |
-| グリッドサイズ | 51×51 | 51×51 |
-| ループ数 | 200 | 200 |
-| クリスタル数 | 28 | 28 |
-
----
-
-## 10. 装備入手方式の変更（ショップ → ガチャ）
-
-**ラベル：[Phase10後]** | 議論日：2026-04-20 | 起点：Phase 4実装時 | 方針変更：2026-04-27
-
-### 現状
-
-Phase 7 では playtest.html の `openShop` / `buyItem` をそのまま移植するショップ形式を採用する（方針を元に戻した）。
-
-### 方針
-
-**Phase 7 では playtest.html 通りのショップ実装を行う。ガチャへの変更は Phase 10 以降に改めて検討する。**
-
-**Why:** まず playtest.html の再現を完成させることを優先し、バランス調整は全 Phase 完了後にまとめて行う方が整合が取りやすい。
-
-**How to apply:** Phase 7 実装時はガチャ関連コードを書かず、`openShop` / `buyItem` / `SHOP_POOL` をそのまま移植する。
-
-### ガチャ案（Phase 10 以降の検討候補）
-
-- 金額3段階（低額／中額／高額）で確率が変わる抽選方式
-- 排出物は装備品のみ（SHOP_POOL を確率テーブルに変換）
-- 当選時：現在の装備と差し替えるか保持するかを選択できる
-- 期待効果：運の要素・ゴールドの使いどころが生まれ戦略の幅が広がる
-
----
-
-## 11. UI改善（メイン画面）
-
-**ラベル：[検討中]** | 議論日：2026-04-29 | 起点：Phase 6実装後
+**ラベル：[完了]** | 議論日：2026-04-29 | 起点：Phase 6実装後
 
 ### 現状
 
@@ -763,9 +694,9 @@ Phase 7 では playtest.html の `openShop` / `buyItem` をそのまま移植す
 
 ---
 
-## 12. UI改善（戦闘画面）
+## 10. UI改善（戦闘画面）
 
-**ラベル：[検討中]** | 議論日：2026-04-29 | 起点：Phase 6実装後
+**ラベル：[完了]** | 議論日：2026-04-29 | 起点：Phase 6実装後
 
 ### 現状
 
@@ -883,3 +814,170 @@ Phase 7 では playtest.html の `openShop` / `buyItem` をそのまま移植す
   - `#battle-action-info` のスタイル追加
 - `js/ui.js`
   - `drawUIRight()` の見出しを `battleState` 有無で切り替え（`[ Message Log ]` ↔ `[ 外の戦況 ]`）
+
+---
+
+## 11. リファクタリング Step A / B / C
+
+**ラベル：[完了]** | 議論日：2026-05-01 | 完了日：2026-05-01 | 起点：全Phase完了後の保守性向上
+
+### 現状（Before）
+
+- ルート直下に死蔵化した `main.js`（34KB、`index.html` から未参照）
+- `index.html` に `<style>` ブロックが残存（`style.css` と二重）
+- `shuffle` が `crystals.js` の `shuffleArr` と `shop.js` の `shuffle` で重複定義
+- HP色しきい値（`> 0.5 ? '#44cc44' : ...`）が `battle.js` × 2、`ui.js`、`sprites.js` に四重複
+- 陣営RGB値が `ui.js` 内で `factionRGB` として `FACTIONS.color` と二重に直書き
+- `crystals.find(...)` 線形探索が 7 箇所で頻出
+- `getFactionForCell` がブロック判定で毎フレーム 5+5 回ループ
+- `_drawUIFactions` が毎フレーム `crystals.filter` × 5回 / `monsters.filter` × 4回
+- 全21個の可変グローバル変数が 7 ファイルに散在し、`battleState` だけで 71 箇所で参照
+- 静的 HTML 要素に `onclick="closeShop()"` 等のインライン属性
+- `castRays` が毎フレーム 1198 全壁を 300 レイ × 全件走査 + 配列を毎回 new
+
+### 決定事項
+
+3段階に分割し、各段階で動作確認のうえ次へ進む方針：
+
+- **Step A（低リスク・即効性）**：死蔵削除・重複統合・インライン属性除去
+- **Step B（構造改善）**：lookup テーブル化・関数の責務再配置・1パス集計化
+- **Step C（描画最適化＋ドキュメント整合）**：壁の水平/垂直分割と方向半カット・バッファ再利用・README/JSDoc 整備
+
+`Game` 名前空間化（Step B のうち最大規模、約200箇所の置換）はリスクが高いため Step B 内で独立タスクとして扱い、ユーザー確認のうえ実施。
+
+### 実装結果
+
+#### Step A
+- ルート `main.js` 削除（34KB）
+- `index.html` の `<style>` ブロックを `css/style.css` 冒頭へ統合
+- `shuffle`（共通） / `hpColorFor(ratio)` / `hexToRgb(hex)` を `config.js` に集約
+- `factionRGB` 直書きを `hexToRgb(FACTIONS[id].color)` に置換（単一情報源化）
+- 静的 HTML 4ボタンの `onclick=` を `id` 化し `addEventListener` で `js/main.js` から登録
+
+#### Step B
+- `cellToBlock[r][c]`（起動時生成、O(1) ブロック逆引き）を `config.js` に追加
+- `crystalAtCell[r][c]` / `crystalByBlock[bR][bC]` lookup を `crystals.js` に追加し、`initCrystals` 末尾で `rebuildCrystalLookups()` を呼ぶ
+- `crystals.find(...)` 7 箇所を全廃 → lookup 経由に置換
+- `drawCrystalsOnMinimap` を `crystals.js` → `minimap.js` へ移動（責務の単一化）
+- `groupMonstersByCell()` ヘルパーを `minimap.js` に抽出（`drawUnitsOnMinimap` と `drawFullMap` の重複を排除）
+- `_drawUIFactions` の filter 9回ループ → 1パス集計（`crystalsByOwner` / `monstersByFaction`）
+- **Game 名前空間化**：21個の可変グローバルを `Game.state`（15）/ `Game.flags`（6）に集約
+  - `js/state.js` を新規作成し `<script>` ロード順の 2 番目に配置
+  - 全 11 ファイル × 約 200 箇所を `Game.state.X` / `Game.flags.X` 経由に置換
+  - 旧グローバル（`monsters` / `battleState` / `gameEnded` 等）は完全に消滅（`typeof === 'undefined'` で確認）
+
+#### Step C
+- 壁を水平 `wallsH`（599）/ 垂直 `wallsV`（599）に分割（`a.y === b.y` / `a.x === b.x` で判定）
+- `castRays` を方向別 2 ループに分け、レイ方向の符号で前方半分のみ走査
+  - 水平壁は `sy = 0`、垂直壁は `sx = 0` が既知のため交差判定式も簡略化
+  - **実測 2.09x 高速化**（旧 3.195ms → 新 1.526ms / 200 回平均）
+- `_hitsBuffer` を固定長 RAY_COUNT で再利用、`_spritesBuffer` / `_cellCounter` / `_monsterCellIdx` も再利用（毎フレーム new せず in-place 更新）
+- `README.md` を最新ファイル構成に更新（`state.js` / `css/style.css` 追加、責務を最新化、`Game.*` 参照規約セクション新設）
+- `state.js` に **JSDoc typedef × 8 個**追加（Crystal / Monster / EquipItem / Player / BattleState / LogEntry / Wall）
+- 主要関数（`makeUnit` / `triggerMonsterTurn` / `startBattle` / `drawSprites` / `initCrystals` / `rebuildCrystalLookups`）に JSDoc 追加
+
+### 実装ファイル
+
+#### 新規
+- `js/state.js`：`Game = { state, flags }` 定義 + JSDoc typedef 群
+
+#### 削除
+- `main.js`（ルート直下、死蔵化）
+
+#### 変更
+- `index.html`：`<style>` 削除、`<script>` ロード順に `state.js` 追加、4 ボタンの `onclick=` を `id` 化
+- `css/style.css`：ページ reset セクション追加
+- `js/config.js`：`shuffle` / `hpColorFor` / `hexToRgb` / `cellToBlock` 追加
+- `js/state.js`（新規）：上記
+- `js/crystals.js`：`shuffleArr` 削除、lookup テーブル追加、`drawCrystalsOnMinimap` を minimap.js に移送、`Game.state.*` 化
+- `js/player.js`：`Game.state.player` 初期化、全関数を `Game.state.*` 経由に
+- `js/monsters.js`：`Game.state.monsters` / `Game.flags.monstersAnimating` 化、JSDoc 追加
+- `js/battle.js`：`Game.state.battleState` 化、`hpColorFor` 利用、`crystalAtCell` 利用
+- `js/shop.js`：重複 `shuffle` 削除、`Game.state.*` 化
+- `js/ui.js`：`hpColorFor` / `hexToRgb` 利用、`factionRGB` 撤去、1パス集計、`Game.state.*` 化
+- `js/minimap.js`：`drawCrystalsOnMinimap` / `groupMonstersByCell` を集約、高速化された `getFactionForCell`、`Game.state.*` / `Game.flags.fullMapOpen` 化
+- `js/render3d.js`：`wallsH` / `wallsV` を使った半カット castRays、`_hitsBuffer` / `_spritesBuffer` 再利用
+- `js/input.js`：`Game.state.*` / `Game.flags.*` 化
+- `js/main.js`：`_setWalls` ヘルパー、`Game.*` 化、4 ボタンの `addEventListener` 登録
+- `README.md` / `INDEX_SPEC.md`：ファイル構成・状態管理規約を最新化
+
+### 計測
+
+| 観点 | Before | After |
+|---|---|---|
+| 死蔵コード | 34 KB（root main.js） | 0 |
+| `crystals.find()` 呼び出し | 7 箇所 | 0（O(1) lookup） |
+| `_drawUIFactions` 毎フレーム filter | 9 回 | 1 回（1パス集計） |
+| `castRays` 平均所要時間 | 3.195 ms | 1.526 ms（**2.09x**） |
+| 散在グローバル変数 | 21 個（7ファイル） | 0（`Game.state` / `Game.flags` 集約） |
+| HP色しきい値の重複 | 4 箇所 | 1 箇所（`hpColorFor`） |
+| JSDoc typedef | 0 | 8 |
+
+---
+
+## 12. ダンジョン生成アルゴリズム
+
+**ラベル：[Phase10後]** | 議論日：2026-04-20 | 起点：Phase 4実装時
+
+### 現状
+
+`index.html` はDFS + パターン駆動のループ追加で迷路を生成している。
+GRID_SIZE=51、LOOP_COUNT=200 の固定パラメータ。
+行き止まりは少ないが、廊下主体の構造になりやすく広い空間（部屋）は生まれない。
+
+> playtest.html との実装差異の詳細は付録を参照
+
+### 課題
+
+- 現状では「廊下主体」の迷路になりやすく、広い空間（部屋）が生まれない
+- 部屋状の空間を作る場合は別アルゴリズム（BSP分割、セルオートマトンなど）の検討が必要
+
+### 決定事項
+
+- **現状の実装（index.html方式）を維持する**
+- 迷路形状の変更（部屋＋廊下構造など）は **Phase 10完了後に検討**
+- Phase 10後の検討候補：
+  - BSP（二分空間分割）で部屋を先に作り廊下でつなぐ
+  - 現アルゴリズムに「部屋彫り」パスを追加する
+  - LOOP_COUNT の調整で開放感を増す（低コスト案）
+
+---
+
+## 付録：playtest.html vs index.html ダンジョン生成の差異
+
+| 項目 | playtest.html | index.html |
+|------|------|------|
+| 迷路生成 | 反復DFS（スタック）| 再帰DFS |
+| 配列型 | Uint8Array | 通常のArray |
+| ループ追加方式 | ランダム2000回試行 ＋ 3パスクリーンアップ | パターン駆動・単一パス |
+| ループ品質 | 無効除去が混入しうる | 全除去が有効な分岐になる |
+| マップ表現 | grid[r][c] = 0/1 をそのまま使用 | Segmentオブジェクト（始点・終点・RGB）に変換 |
+| 経路探索 | BFS（Map + [r,c]タプル） | BFS（Set + {r,c}オブジェクト） |
+| グリッドサイズ | 51×51 | 51×51 |
+| ループ数 | 200 | 200 |
+| クリスタル数 | 28 | 28 |
+
+---
+
+## 13. 装備入手方式の変更（ショップ → ガチャ）
+
+**ラベル：[Phase10後]** | 議論日：2026-04-20 | 起点：Phase 4実装時 | 方針変更：2026-04-27
+
+### 現状
+
+Phase 7 では playtest.html の `openShop` / `buyItem` をそのまま移植するショップ形式を採用する（方針を元に戻した）。
+
+### 方針
+
+**Phase 7 では playtest.html 通りのショップ実装を行う。ガチャへの変更は Phase 10 以降に改めて検討する。**
+
+**Why:** まず playtest.html の再現を完成させることを優先し、バランス調整は全 Phase 完了後にまとめて行う方が整合が取りやすい。
+
+**How to apply:** Phase 7 実装時はガチャ関連コードを書かず、`openShop` / `buyItem` / `SHOP_POOL` をそのまま移植する。
+
+### ガチャ案（Phase 10 以降の検討候補）
+
+- 金額3段階（低額／中額／高額）で確率が変わる抽選方式
+- 排出物は装備品のみ（SHOP_POOL を確率テーブルに変換）
+- 当選時：現在の装備と差し替えるか保持するかを選択できる
+- 期待効果：運の要素・ゴールドの使いどころが生まれ戦略の幅が広がる

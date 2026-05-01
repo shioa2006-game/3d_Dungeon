@@ -3,7 +3,7 @@ function getFactionForCell(gr, gc) {
   if (gr < 0 || gr >= GRID_SIZE || gc < 0 || gc >= GRID_SIZE) return null;
   const block = cellToBlock[gr][gc];
   if (!block) return null;
-  const cr = crystalByBlock[block[0]][block[1]];
+  const cr = Game.state.crystalByBlock[block[0]][block[1]];
   if (!cr || cr.owner === 'neutral') return null;
   return FACTIONS[cr.owner] ?? null;
 }
@@ -11,9 +11,8 @@ function getFactionForCell(gr, gc) {
 // =====================
 // 全体マップ state（専用キャンバスで最前面表示）
 // =====================
-let fullMapOpen = false;
-let _fmCanvas   = null;
-let _fmCtx      = null;
+let _fmCanvas = null;
+let _fmCtx    = null;
 
 function _initFmCanvas() {
   if (_fmCanvas) return;
@@ -23,11 +22,8 @@ function _initFmCanvas() {
   _fmCtx = _fmCanvas.getContext('2d');
 }
 
-function toggleFullMap() { fullMapOpen = !fullMapOpen; }
+function toggleFullMap() { Game.flags.fullMapOpen = !Game.flags.fullMapOpen; }
 
-// =====================
-// ミニマップ: ユニット描画ヘルパー
-// =====================
 // =====================
 // ミニマップ上のクリスタルドット
 // =====================
@@ -39,13 +35,14 @@ function drawCrystalsOnMinimap() {
   const mapX0    = R.x + (R.w - mapArea) / 2;
   const mapY0    = R.y + (R.h - mapArea) / 2;
 
+  const player   = Game.state.player;
   const pcx      = player.pos.x / CELL_SIZE;
   const pcy      = player.pos.y / CELL_SIZE;
   const half     = MINIMAP_VIEW_CELLS / 2;
   const viewLeft = pcx - half;
   const viewTop  = pcy - half;
 
-  for (const cr of crystals) {
+  for (const cr of Game.state.crystals) {
     const gx = cr.c + 0.5 - viewLeft;
     const gy = cr.r + 0.5 - viewTop;
     if (gx < 0 || gx > MINIMAP_VIEW_CELLS ||
@@ -85,7 +82,7 @@ function drawCrystalsOnMinimap() {
 // monsters を grid セルごとにグループ化（同じ向き・キーは "r,c"）
 function groupMonstersByCell() {
   const groups = new Map();
-  for (const m of monsters) {
+  for (const m of Game.state.monsters) {
     const key = `${m.gridR},${m.gridC}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(m);
@@ -143,6 +140,8 @@ function drawMinimap() {
   ctx.save();
   ctx.beginPath(); ctx.rect(R.x, R.y, R.w, R.h); ctx.clip();
 
+  const player   = Game.state.player;
+  const grid     = Game.state.grid;
   const pcx      = player.pos.x / CELL_SIZE;
   const pcy      = player.pos.y / CELL_SIZE;
   const half     = MINIMAP_VIEW_CELLS / 2;
@@ -228,7 +227,7 @@ function drawMinimap() {
 function drawFullMap() {
   _initFmCanvas();
 
-  if (!fullMapOpen) {
+  if (!Game.flags.fullMapOpen) {
     _fmCanvas.hidden = true;
     return;
   }
@@ -249,6 +248,8 @@ function drawFullMap() {
   // マップ全体を壁色で塗りつぶし
   c.fillStyle = '#445544';
   c.fillRect(mapX0, mapY0, mapW, mapH);
+
+  const grid = Game.state.grid;
 
   // 通路セルを描画
   for (let gr = 0; gr < GRID_SIZE; gr++) {
@@ -278,7 +279,7 @@ function drawFullMap() {
         const bw = (BLOCK_COL_ENDS[bC] - BLOCK_COL_STARTS[bC] + 1) * cellDraw;
         const bh = (BLOCK_ROW_ENDS[bR] - BLOCK_ROW_STARTS[bR] + 1) * cellDraw;
 
-        const blockCr  = crystalByBlock[bR][bC];
+        const blockCr  = Game.state.crystalByBlock[bR][bC];
         const owner    = blockCr ? blockCr.owner : 'neutral';
         const isValid  = blockCr ? blockCr.valid : false;
         const isHome   = homeSet.has(`${bR},${bC}`);
@@ -356,7 +357,7 @@ function drawFullMap() {
   // ── ここまで A案 ──
 
   // クリスタル（三角形）
-  for (const cr of crystals) {
+  for (const cr of Game.state.crystals) {
     const sx = mapX0 + (cr.c + 0.5) * cellDraw;
     const sy = mapY0 + (cr.r + 0.5) * cellDraw;
     const f  = FACTIONS[cr.owner];
@@ -404,6 +405,7 @@ function drawFullMap() {
   }
 
   // プレイヤー: 方向線 → 白丸
+  const player = Game.state.player;
   const psx = mapX0 + (player.pos.x / CELL_SIZE) * cellDraw;
   const psy = mapY0 + (player.pos.y / CELL_SIZE) * cellDraw;
   c.beginPath();

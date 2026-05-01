@@ -1,4 +1,5 @@
-const player = {
+// プレイヤー初期化（state.js の Game.state.player にセット）
+Game.state.player = {
   pos:   new Vec2(1.5 * CELL_SIZE, 1.5 * CELL_SIZE),
   angle:       FACING_ANGLES[1],
   visualAngle: FACING_ANGLES[1],  // スプリングで追従する描画専用角度
@@ -20,34 +21,36 @@ const player = {
   equip: { weapon: null, armor: null, accessory: null },
 };
 
-let explored = [];
-
 function initExplored() {
-  explored = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
+  Game.state.explored = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
   markExplored();
 }
 
 function markExplored() {
+  const player = Game.state.player;
+  const grid   = Game.state.grid;
   const r = player.gridR, c = player.gridC;
-  explored[r][c] = true;
+  Game.state.explored[r][c] = true;
   for (const d of FACING_DIRS) {
     for (let step = 1; step <= 6; step++) {
       const nr = r + d.dr * step;
       const nc = c + d.dc * step;
       if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) break;
-      explored[nr][nc] = true;
+      Game.state.explored[nr][nc] = true;
       if (grid[nr][nc] === 1) break;
     }
   }
 }
 
 function initPlayerStats() {
+  const player = Game.state.player;
   player.hp   = PLAYER_INIT.hp;
   player.gold = 0;
   player.equip = { weapon: null, armor: null, accessory: null };
 }
 
 function playerStats() {
+  const player = Game.state.player;
   let s = { hp: PLAYER_INIT.hp, atk: PLAYER_INIT.atk, rec: PLAYER_INIT.rec, agi: PLAYER_INIT.agi };
   for (const slot of ['weapon', 'armor', 'accessory']) {
     const eq = player.equip[slot];
@@ -62,22 +65,23 @@ function playerStats() {
 
 function playerAtkVs(raceOrType) {
   const { atk } = playerStats();
-  const w = player.equip.weapon;
+  const w = Game.state.player.equip.weapon;
   if (w?.bonus?.[raceOrType]) return Math.max(1, Math.floor(atk * w.bonus[raceOrType]));
   return atk;
 }
 
 function spawnPlayerAtHome() {
+  const player = Game.state.player;
   let best = null, bestDist = Infinity;
   // 有効な人間族クリスタルのみ復活先候補とする
-  for (const cr of crystals) {
+  for (const cr of Game.state.crystals) {
     if (cr.owner !== 'human' || !cr.valid) continue;
     const d = Math.abs(cr.r - player.gridR) + Math.abs(cr.c - player.gridC);
     if (d < bestDist) { bestDist = d; best = cr; }
   }
   // フォールバック：有効クリスタルがゼロの場合は所有クリスタル全体から探す
   if (!best) {
-    for (const cr of crystals) {
+    for (const cr of Game.state.crystals) {
       if (cr.owner !== 'human') continue;
       const d = Math.abs(cr.r - player.gridR) + Math.abs(cr.c - player.gridC);
       if (d < bestDist) { bestDist = d; best = cr; }
@@ -94,7 +98,8 @@ function spawnPlayerAtHome() {
 }
 
 function checkCrystalClaim() {
-  const cr = crystalAtCell[player.gridR][player.gridC];
+  const player = Game.state.player;
+  const cr = Game.state.crystalAtCell[player.gridR][player.gridC];
   if (!cr || cr.owner === 'human') return;
   cr.owner      = 'human';
   cr.spawnTimer = 0;
@@ -105,6 +110,8 @@ function checkCrystalClaim() {
 }
 
 function startMove(dir) {
+  const player = Game.state.player;
+  const grid   = Game.state.grid;
   const d  = FACING_DIRS[dir];
   const nr = player.gridR + d.dr;
   const nc = player.gridC + d.dc;
@@ -112,8 +119,8 @@ function startMove(dir) {
   if (grid[nr][nc] !== 0) return;
 
   // 移動先に敵がいれば通過せずその場でバトル開始
-  if (!battleState) {
-    const contact = monsters.find(m =>
+  if (!Game.state.battleState) {
+    const contact = Game.state.monsters.find(m =>
       m.hp > 0 && !m.battleLocked &&
       m.gridR === nr && m.gridC === nc &&
       m.faction !== 'human'
@@ -136,6 +143,7 @@ function startMove(dir) {
 }
 
 function startRotate(dir) {
+  const player = Game.state.player;
   // ゲームロジック（facing / angle）を即時確定
   // visualAngle は updatePlayer() のスプリングで滑らかに追従する
   player.facing = (player.facing + dir + 4) % 4;
@@ -143,6 +151,7 @@ function startRotate(dir) {
 }
 
 function updatePlayer() {
+  const player = Game.state.player;
   if (player.moving) {
     player.moveProgress += 1 / MOVE_FRAMES;
     if (player.moveProgress >= 1) {
@@ -155,7 +164,7 @@ function updatePlayer() {
       markExplored();
       updateOnCrystal();
       checkMonsterContact();
-      if (!battleState) checkCrystalClaim();
+      if (!Game.state.battleState) checkCrystalClaim();
     } else {
       const t = smoothstep(player.moveProgress);
       player.pos.x = player.moveFrom.x + (player.moveTo.x - player.moveFrom.x) * t;

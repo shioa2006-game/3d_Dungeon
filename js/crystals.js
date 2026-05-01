@@ -9,27 +9,23 @@ const CRYSTAL_IMGS = {};
 });
 
 // =====================
-// Crystal data
+// Crystal lookup tables を再構築
+// initCrystals() の最後で呼ぶ。クリスタル位置は不変なので所有者変更時の再構築は不要
 // =====================
-let crystals = [];
-let humanAutoSpawnIndex = 0;
-
-// Lookup tables (initCrystals 内で再構築)
-let crystalAtCell  = null;   // [r][c] -> crystal | null
-let crystalByBlock = null;   // [bR][bC] -> crystal | null
-
+/** @returns {void} */
 function rebuildCrystalLookups() {
-  crystalAtCell  = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
-  crystalByBlock = Array.from({ length: 5 }, () => Array(5).fill(null));
-  for (const cr of crystals) {
-    crystalAtCell[cr.r][cr.c]            = cr;
-    crystalByBlock[cr.blockR][cr.blockC] = cr;
+  Game.state.crystalAtCell  = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+  Game.state.crystalByBlock = Array.from({ length: 5 }, () => Array(5).fill(null));
+  for (const cr of Game.state.crystals) {
+    Game.state.crystalAtCell[cr.r][cr.c]            = cr;
+    Game.state.crystalByBlock[cr.blockR][cr.blockC] = cr;
   }
 }
 
 // 通路セルのリストを返す（範囲内）
 function openCells(r1, r2, c1, c2) {
   const out = [];
+  const grid = Game.state.grid;
   for (let r = r1; r <= r2; r++)
     for (let c = c1; c <= c2; c++)
       if (grid[r] && grid[r][c] === 0) out.push([r, c]);
@@ -37,9 +33,10 @@ function openCells(r1, r2, c1, c2) {
 }
 
 // 迷路再生成が必要な場合は false を返す（main.js でリトライ）
+/** @returns {boolean} 全25ブロックにクリスタルを配置できれば true */
 function initCrystals() {
-  crystals = [];
-  humanAutoSpawnIndex = 0;
+  Game.state.crystals = [];
+  Game.state.humanAutoSpawnIndex = 0;
 
   for (let bR = 0; bR < 5; bR++) {
     for (let bC = 0; bC < 5; bC++) {
@@ -51,7 +48,7 @@ function initCrystals() {
       const [r, c] = cells[0];
       const owner  = BLOCK_INIT_OWNER[bR][bC];
       const interval = owner === 'human' ? HUMAN_SPAWN_COOLDOWN : AI_SPAWN[owner];
-      crystals.push({
+      Game.state.crystals.push({
         r, c,
         owner,
         spawnTimer: owner === 'neutral' ? 0 : Math.random() * (interval ?? 0),
@@ -71,6 +68,7 @@ function initCrystals() {
 // 連結判定（所有者変更のたびに呼び出す）
 // =====================
 function updateCrystalConnectivity() {
+  const crystals = Game.state.crystals;
   // 全クリスタルをいったん無効化
   for (const cr of crystals) cr.valid = false;
 
@@ -93,7 +91,7 @@ function updateCrystalConnectivity() {
     }
     while (queue.length > 0) {
       const [bR, bC] = queue.shift();
-      const cr = crystalByBlock[bR][bC];
+      const cr = Game.state.crystalByBlock[bR][bC];
       if (cr && cr.owner === faction) cr.valid = true;
 
       for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
@@ -115,21 +113,21 @@ function updateCrystalConnectivity() {
 function trySpawnFromCrystal(cr) {
   if (!cr.valid) return;   // 飛び地クリスタルはスポーン不可
   const type = cr.owner === 'human'
-    ? HUMAN_AUTO_TYPES[humanAutoSpawnIndex % HUMAN_AUTO_TYPES.length]
+    ? HUMAN_AUTO_TYPES[Game.state.humanAutoSpawnIndex % HUMAN_AUTO_TYPES.length]
     : AI_UNIT[cr.owner];
   if (!type) return;
 
-  const ownCrystals = crystals.filter(c => c.owner === cr.owner).length;
+  const ownCrystals = Game.state.crystals.filter(c => c.owner === cr.owner).length;
   const cap     = Math.min(UNIT_CAP_MAX, ownCrystals * UNIT_CAP_PER_CRYSTAL);
-  const current = monsters.filter(m => m.faction === cr.owner).length;
+  const current = Game.state.monsters.filter(m => m.faction === cr.owner).length;
   if (current >= cap) return;
 
-  monsters.push(makeUnit(type, cr.r, cr.c));
-  if (cr.owner === 'human') humanAutoSpawnIndex++;
+  Game.state.monsters.push(makeUnit(type, cr.r, cr.c));
+  if (cr.owner === 'human') Game.state.humanAutoSpawnIndex++;
 }
 
 function updateCrystals() {
-  for (const cr of crystals) {
+  for (const cr of Game.state.crystals) {
     if (cr.owner === 'neutral') continue;
     cr.spawnTimer += 1;
     const interval = cr.owner === 'human' ? HUMAN_SPAWN_COOLDOWN : AI_SPAWN[cr.owner];
@@ -139,4 +137,3 @@ function updateCrystals() {
     }
   }
 }
-

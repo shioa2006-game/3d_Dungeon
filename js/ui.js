@@ -27,11 +27,8 @@ function drawText(text, x, y, color, size, align, baseline) {
 }
 
 // =====================
-// メッセージログ・ワールドターン
+// メッセージログ
 // =====================
-let worldTurn  = 0;
-const messageLog = [];   // [{ text, category, count }]
-
 // カテゴリ別の色（バッジ＋アクセント用）
 const LOG_CATEGORY_COLORS = {
   occupy:   '#66aaff',
@@ -49,6 +46,7 @@ const LOG_CATEGORY_LABELS = {
 };
 
 function logMessage(text, category = 'system') {
+  const messageLog = Game.state.messageLog;
   // 直前ログと本文一致なら count を増やす（連続重複のみ統合）
   const last = messageLog[0];
   if (last && last.text === text && last.category === category) {
@@ -68,7 +66,7 @@ function drawUIRight() {
   strokeRect(R.x, R.y, R.w, R.h, 60, 60, 80, 1);
 
   // 戦闘中はタイトル切替
-  const title = battleState ? '[ 外の戦況 ]' : '[ Message Log ]';
+  const title = Game.state.battleState ? '[ 外の戦況 ]' : '[ Message Log ]';
   drawText(title, R.x + 10, R.y + 8, '#aabbcc', 12);
 
   // パネル内クリップ（長文の右端はみ出しを防ぐ）
@@ -77,7 +75,7 @@ function drawUIRight() {
   ctx.rect(R.x + 4, R.y + 24, R.w - 8, R.h - 28);
   ctx.clip();
 
-  const recent = messageLog.slice(0, 9);
+  const recent = Game.state.messageLog.slice(0, 9);
   const lineH  = 22;
   for (let i = 0; i < recent.length; i++) {
     const entry = recent[i];
@@ -116,10 +114,11 @@ function _drawUIStatus() {
 
   // ── ヘッダー：[Status] と Turn を横並び ──
   drawText('[ Status ]', tx, ty, '#aabbcc', 13);
-  drawText(`Turn ${worldTurn}`, R.x + R.w - 16, ty, '#7799bb', 13, 'right');
+  drawText(`Turn ${Game.state.worldTurn}`, R.x + R.w - 16, ty, '#7799bb', 13, 'right');
   ty += 20;
 
   // ── HP（大型表示）──
+  const player = Game.state.player;
   const s     = playerStats();
   const pHp   = Math.ceil(player.hp);
   const hpPct = Math.max(0, Math.min(1, pHp / s.hp));
@@ -172,7 +171,7 @@ function _drawUIStatus() {
   ty += 12;
 
   // ── クリスタル上アクションバー（キーキャップ風）──
-  if (onCrystal) {
+  if (Game.state.onCrystal) {
     _drawActionBar(R.x + 8, R.y + R.h - 32, R.w - 16);
   }
 }
@@ -226,17 +225,17 @@ function _drawUIFactions() {
   // 1パスで陣営別の集計（filter のループ重複を排除）
   const crystalsByOwner = {};
   let humanValid = 0;
-  for (const c of crystals) {
+  for (const c of Game.state.crystals) {
     crystalsByOwner[c.owner] = (crystalsByOwner[c.owner] || 0) + 1;
     if (c.owner === 'human' && c.valid) humanValid++;
   }
   const monstersByFaction = {};
-  for (const m of monsters) {
+  for (const m of Game.state.monsters) {
     monstersByFaction[m.faction] = (monstersByFaction[m.faction] || 0) + 1;
   }
 
   // ── 解放進捗（自陣営の有効クリスタル比率）──
-  const totalCr  = crystals.length;
+  const totalCr  = Game.state.crystals.length;
   const progress = totalCr > 0 ? Math.round(humanValid / totalCr * 100) : 0;
   drawText(`解放進捗 ${progress}%`, R.x + R.w - 16, ty, '#aaccff', 13, 'right');
   ty += 22;

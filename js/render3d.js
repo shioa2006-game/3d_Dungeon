@@ -1,7 +1,23 @@
 const depthBuffer = new Array(RAY_COUNT).fill(Infinity);
 
+// hits バッファは固定長で再利用（毎フレーム new しない）
+const _hitsBuffer = new Array(RAY_COUNT);
+for (let i = 0; i < RAY_COUNT; i++) {
+  _hitsBuffer[i] = { hit: false, dist: Infinity, wall: null, rayAngle: 0, wallU01: 0 };
+}
+
+/**
+ * Ray-casting：プレイヤー視点から RAY_COUNT 本のレイを発射し、
+ * 各レイが最初に当たる壁を見つける。
+ *
+ * 最適化:
+ *  - 水平壁/垂直壁を別々に持ち、レイ方向の符号で半分を即カット（wallsH/V）
+ *  - 戻り値は固定バッファ _hitsBuffer を再利用（GC圧低減）
+ */
 function castRays() {
-  const hits = [];
+  const player = Game.state.player;
+  const wallsH = Game.state.wallsH;
+  const wallsV = Game.state.wallsV;
   const ox   = player.pos.x, oy = player.pos.y;
   const half = player.fov / 2;
   const base = player.visualAngle - half;
@@ -16,12 +32,17 @@ function castRays() {
     let bestWall = null;
     let bestU    = 0;
 
-    for (const w of walls) {
-      const sx  = w.b.x - w.a.x, sy = w.b.y - w.a.y;
-      const rxs = rdx * sy - rdy * sx;
+    // 水平壁：レイの y 方向にある側のみ走査
+    for (let k = 0; k < wallsH.length; k++) {
+      const w = wallsH[k];
+      // 半カット：水平壁は y 一定 → レイ y 方向に応じて前方のみ
+      if (rdy > 0 ? w.a.y < oy : w.a.y > oy) continue;
+
+      const sx  = w.b.x - w.a.x;        // sy=0（水平壁）
+      const rxs = -rdy * sx;
       if (rxs > -1e-9 && rxs < 1e-9) continue;
-      const qpx  = w.a.x - ox, qpy = w.a.y - oy;
-      const tVal = (qpx * sy - qpy * sx) / rxs;
+      const qpx = w.a.x - ox, qpy = w.a.y - oy;
+      const tVal = -qpy * sx / rxs;
       if (tVal < 0 || tVal >= bestDist) continue;
       const uVal = (qpx * rdy - qpy * rdx) / rxs;
       if (uVal < 0 || uVal > 1) continue;
@@ -30,15 +51,37 @@ function castRays() {
       bestU    = uVal;
     }
 
-    hits.push(bestWall !== null
-      ? { hit: true,  dist: bestDist, wall: bestWall, rayAngle, wallU01: bestU }
-      : { hit: false, dist: Infinity, wall: null,     rayAngle, wallU01: 0    }
-    );
+    // 垂直壁：レイの x 方向にある側のみ走査
+    for (let k = 0; k < wallsV.length; k++) {
+      const w = wallsV[k];
+      if (rdx > 0 ? w.a.x < ox : w.a.x > ox) continue;
+
+      const sy  = w.b.y - w.a.y;        // sx=0（垂直壁）
+      const rxs = rdx * sy;
+      if (rxs > -1e-9 && rxs < 1e-9) continue;
+      const qpx = w.a.x - ox, qpy = w.a.y - oy;
+      const tVal = qpx * sy / rxs;
+      if (tVal < 0 || tVal >= bestDist) continue;
+      const uVal = (qpx * rdy - qpy * rdx) / rxs;
+      if (uVal < 0 || uVal > 1) continue;
+      bestDist = tVal;
+      bestWall = w;
+      bestU    = uVal;
+    }
+
+    // バッファに in-place 書き込み
+    const h = _hitsBuffer[i];
+    if (bestWall !== null) {
+      h.hit = true; h.dist = bestDist; h.wall = bestWall; h.rayAngle = rayAngle; h.wallU01 = bestU;
+    } else {
+      h.hit = false; h.dist = Infinity; h.wall = null; h.rayAngle = rayAngle; h.wallU01 = 0;
+    }
   }
-  return hits;
+  return _hitsBuffer;
 }
 
 function drawView3D(hits) {
+  const player = Game.state.player;
   const R = VIEW3D;
   ctx.save();
   ctx.beginPath(); ctx.rect(R.x, R.y, R.w, R.h); ctx.clip();
@@ -75,6 +118,7 @@ function drawView3D(hits) {
 }
 
 function drawCompass() {
+  const player = Game.state.player;
   const R = VIEW3D;
   const displayFacing = player.facing;  // facing は startRotate() で即時確定
 
@@ -133,37 +177,61 @@ function getSpriteDir(m, dx, dy) {
   }
 }
 
+// drawSprites のスプライトリストは固定バッファ＋必要分だけ length で切る方式
+const _spritesBuffer = [];
+const _cellCounter   = new Map();
+const _monsterCellIdx = new Map();
+
+/**
+ * モンスターとクリスタルを Z-sort（遠→近）してテクスチャ描画。
+ * castRays で更新した depthBuffer と比較して壁裏のスプライトを隠す。
+ * 内部バッファ（_spritesBuffer）を再利用して GC 圧を低減。
+ */
 function drawSprites() {
+  const player = Game.state.player;
   const R    = VIEW3D;
   const colW = R.w / RAY_COUNT;
 
   // 同一マスグルーピング：monsters配列順に奥行きオフセット index を付与
-  const cellCounter   = new Map();
-  const monsterCellIdx = new Map();
-  for (const m of monsters) {
+  _cellCounter.clear();
+  _monsterCellIdx.clear();
+  for (const m of Game.state.monsters) {
     const key = `${m.gridR},${m.gridC}`;
-    const idx = cellCounter.get(key) ?? 0;
-    monsterCellIdx.set(m, idx);
-    cellCounter.set(key, idx + 1);
+    const idx = _cellCounter.get(key) ?? 0;
+    _monsterCellIdx.set(m, idx);
+    _cellCounter.set(key, idx + 1);
   }
 
   // モンスターとクリスタルを距離でまとめてZ-sort（遠→近）
-  const sprites = [];
+  // 既存バッファに in-place 追加（不足ぶんだけ push、余剰は length で切る）
+  let bufIdx = 0;
+  const pushSprite = (kind, data, dx, dy, dist) => {
+    let s = _spritesBuffer[bufIdx];
+    if (!s) {
+      s = { kind, data, dx, dy, dist };
+      _spritesBuffer.push(s);
+    } else {
+      s.kind = kind; s.data = data; s.dx = dx; s.dy = dy; s.dist = dist;
+    }
+    bufIdx++;
+  };
 
-  for (const m of monsters) {
+  for (const m of Game.state.monsters) {
     const dx = m.pos.x - player.pos.x, dy = m.pos.y - player.pos.y;
     const rawDist = Math.hypot(dx, dy);
-    const cellIdx = monsterCellIdx.get(m) ?? 0;
+    const cellIdx = _monsterCellIdx.get(m) ?? 0;
     // index が大きいほど手前に描画・やや大きく表示（同一マス内で重なりを表現）
     const dist = Math.max(1, rawDist - SAME_CELL_DEPTH_OFFSET * cellIdx);
-    sprites.push({ kind: 'monster', data: m, dx, dy, dist });
+    pushSprite('monster', m, dx, dy, dist);
   }
 
-  for (const cr of crystals) {
+  for (const cr of Game.state.crystals) {
     const wx = (cr.c + 0.5) * CELL_SIZE, wy = (cr.r + 0.5) * CELL_SIZE;
     const dx = wx - player.pos.x, dy = wy - player.pos.y;
-    sprites.push({ kind: 'crystal', data: cr, dx, dy, dist: Math.hypot(dx, dy) });
+    pushSprite('crystal', cr, dx, dy, Math.hypot(dx, dy));
   }
+  _spritesBuffer.length = bufIdx;
+  const sprites = _spritesBuffer;
 
   sprites.sort((a, b) => b.dist - a.dist);
 

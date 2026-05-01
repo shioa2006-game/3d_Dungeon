@@ -1,21 +1,20 @@
-let shopItems       = null;
-let shopSelectedIdx = 0;
-let onCrystal       = null;
-
 function updateOnCrystal() {
-  const cr = crystalAtCell[player.gridR][player.gridC];
-  onCrystal = (cr && cr.owner === 'human') ? cr : null;
+  const player = Game.state.player;
+  const cr = Game.state.crystalAtCell[player.gridR][player.gridC];
+  Game.state.onCrystal = (cr && cr.owner === 'human') ? cr : null;
 }
 
 // =====================
 // クリスタル回復（Q キー）
 // =====================
 function healAtCrystal() {
-  if (!onCrystal || battleState || shopItems || gameEnded) return;
+  const onCrystal = Game.state.onCrystal;
+  if (!onCrystal || Game.state.battleState || Game.state.shopItems || Game.flags.gameEnded) return;
   if (!onCrystal.valid) {
     logMessage('⚠️ このクリスタルは本拠地から切断されています', 'system');
     return;
   }
+  const player = Game.state.player;
   const s   = playerStats();
   const old = player.hp;
   player.hp = Math.min(s.hp, player.hp + s.rec);
@@ -28,19 +27,22 @@ function healAtCrystal() {
 // ショップを開く（E キー）
 // =====================
 function openShop() {
-  if (!onCrystal || battleState || shopItems || gameEnded) return;
+  const onCrystal = Game.state.onCrystal;
+  if (!onCrystal || Game.state.battleState || Game.state.shopItems || Game.flags.gameEnded) return;
   if (!onCrystal.valid) {
     logMessage('⚠️ このクリスタルは本拠地から切断されています', 'system');
     return;
   }
   const pool  = shuffle([...SHOP_POOL]);
-  shopItems        = pool.slice(0, SHOP_ROLL_N);
-  shopSelectedIdx  = 0;
+  Game.state.shopItems        = pool.slice(0, SHOP_ROLL_N);
+  Game.state.shopSelectedIdx  = 0;
   renderShop();
   document.getElementById('shop-modal').hidden = false;
 }
 
 function renderShop() {
+  const player    = Game.state.player;
+  const shopItems = Game.state.shopItems;
   document.getElementById('shop-gold').textContent = player.gold;
   const html = shopItems.map((item, i) => {
     const existing = player.equip[item.slot];
@@ -57,7 +59,7 @@ function renderShop() {
         mods.push(`vs${FACTIONS[race].name}×${m}`);
     }
     const sellText = existing ? ` (${existing.name}を${sellBack}Gで買取)` : '';
-    const kbSel    = i === shopSelectedIdx ? ' kb-selected' : '';
+    const kbSel    = i === Game.state.shopSelectedIdx ? ' kb-selected' : '';
     return `<div class="shop-item${afford ? '' : ' cant-afford'}${kbSel}" ${afford ? `onclick="buyItem(${i})"` : ''}>
       <div>
         <div><span class="shop-slot">[${item.slot}]</span> ${item.name}</div>
@@ -70,7 +72,8 @@ function renderShop() {
 }
 
 function buyItem(idx) {
-  const item = shopItems?.[idx];
+  const player = Game.state.player;
+  const item = Game.state.shopItems?.[idx];
   if (!item) return;
   const existing = player.equip[item.slot];
   const sellBack = existing ? Math.floor(existing.price / 2) : 0;
@@ -86,6 +89,6 @@ function buyItem(idx) {
 }
 
 function closeShop() {
-  shopItems = null;
+  Game.state.shopItems = null;
   document.getElementById('shop-modal').hidden = true;
 }

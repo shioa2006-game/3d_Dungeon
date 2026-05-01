@@ -1,19 +1,23 @@
-let battleState         = null;
-let battleNeedsRerender = false;
-let gameEnded           = false;
-
 // =====================
 // バトル開始
 // =====================
+/**
+ * 接触したモンスターを起点にバトル状態を生成する。
+ * 同種族の隣接ユニットを最大4体合流させて陣形を組み、
+ * プレイヤー隣接の人間族 NPC を最大4体味方として召集する。
+ *
+ * @param {Monster} contactEnemy
+ */
 function startBattle(contactEnemy) {
-  if (battleState) return;
+  if (Game.state.battleState) return;
   if (contactEnemy.hp <= 0) return;  // ワールドターン中に撃破済みなら開始しない
 
   const race = contactEnemy.faction;
+  const player = Game.state.player;
 
   // 敵陣形：接触1体 + 同種族で接触セルから隣接8マス（最大5体）
   const enemies = [contactEnemy];
-  for (const m of monsters) {
+  for (const m of Game.state.monsters) {
     if (m === contactEnemy || m.hp <= 0 || m.faction !== race) continue;
     if (Math.abs(m.gridR - contactEnemy.gridR) <= 1 &&
         Math.abs(m.gridC - contactEnemy.gridC) <= 1) {
@@ -23,7 +27,7 @@ function startBattle(contactEnemy) {
 
   // 味方陣形：人間族AIでプレイヤーから隣接8マス（最大4体）
   const allyUnits = [];
-  for (const m of monsters) {
+  for (const m of Game.state.monsters) {
     if (m.hp <= 0 || m.faction !== 'human') continue;
     if (Math.abs(m.gridR - player.gridR) <= 1 &&
         Math.abs(m.gridC - player.gridC) <= 1) {
@@ -34,7 +38,7 @@ function startBattle(contactEnemy) {
   for (const e of enemies)   e.battleLocked = true;
   for (const a of allyUnits) a.battleLocked = true;
 
-  battleState = {
+  Game.state.battleState = {
     enemyRace:       race,
     enemies,
     allyUnits,
@@ -58,6 +62,7 @@ function _renderUnitCard(unit, opts) {
     return `<div class="battle-unit empty"><div class="unit-info"></div></div>`;
   }
   if (unit.isPlayer) {
+    const player   = Game.state.player;
     const s        = playerStats();
     const pHp      = Math.max(0, Math.ceil(player.hp));
     const pHpPct   = Math.round(pHp / s.hp * 100);
@@ -67,7 +72,7 @@ function _renderUnitCard(unit, opts) {
         data-type="player" data-hp="${pHp}" data-maxhp="${s.hp}"></canvas>
       <div class="unit-info">
         <div class="unit-name">プレイヤー</div>
-        <div class="unit-stats">HP ${pHp}/${s.hp}　ATK ${playerAtkVs(battleState.enemyRace)}</div>
+        <div class="unit-stats">HP ${pHp}/${s.hp}　ATK ${playerAtkVs(Game.state.battleState.enemyRace)}</div>
         <div class="unit-hpbar">
           <div class="unit-hpbar-fill" style="width:${pHpPct}%;background:${pHpColor}"></div>
         </div>
@@ -98,6 +103,7 @@ function _renderUnitCard(unit, opts) {
 }
 
 function renderBattle() {
+  const battleState = Game.state.battleState;
   if (!battleState) return;
 
   document.getElementById('battle-enemy-name').textContent =
@@ -190,6 +196,7 @@ function _renderBattleSprites() {
 // ターゲット選択（クリック）
 // =====================
 function selectBattleTarget(idx) {
+  const battleState = Game.state.battleState;
   if (!battleState || battleState.enemies[idx]?.hp <= 0) return;
   battleState.selectedTarget = idx;
   renderBattle();
@@ -199,9 +206,12 @@ function selectBattleTarget(idx) {
 // 「戦う」実行
 // =====================
 function battleAttack(targetIdx) {
+  const battleState = Game.state.battleState;
   if (!battleState) return;
   const target = battleState.enemies[targetIdx];
   if (!target || target.hp <= 0) return;
+
+  const player = Game.state.player;
 
   // プレイヤー攻撃
   const dmg = playerAtkVs(target.type);
@@ -252,13 +262,14 @@ function battleAttack(targetIdx) {
   // 次ターゲット自動選択 → 即時再描画
   const nextIdx = battleState.enemies.findIndex(e => e.hp > 0);
   battleState.selectedTarget = nextIdx >= 0 ? nextIdx : null;
-  if (battleState) renderBattle();
+  if (Game.state.battleState) renderBattle();
 }
 
 // =====================
 // 「逃げる」実行
 // =====================
 function battleFlee() {
+  const battleState = Game.state.battleState;
   if (!battleState) return;
   const { agi } = playerStats();
   const chance  = Math.min(0.95, Math.max(0.1, FLEE_BASE + (agi - 10) * 0.02));
@@ -271,11 +282,11 @@ function battleFlee() {
     battleState.log.unshift(`逃走失敗！ (確率 ${Math.round(chance * 100)}%)`);
     _enemyBattleTurn();
     _worldTurnForBattle();
-    if (player.hp <= 0) {
+    if (Game.state.player.hp <= 0) {
       endBattle('dead');
       return;
     }
-    if (battleState) renderBattle();
+    if (Game.state.battleState) renderBattle();
   }
 }
 
@@ -283,6 +294,8 @@ function battleFlee() {
 // 敵ターン
 // =====================
 function _enemyBattleTurn() {
+  const battleState = Game.state.battleState;
+  const player = Game.state.player;
   for (const e of battleState.enemies) {
     if (e.hp <= 0) continue;
     // ターゲットプール：プレイヤー + 生存味方NPC
@@ -310,6 +323,7 @@ function _enemyBattleTurn() {
 // バトル中のワールドターン（Q3b: アニメーション付き）
 // =====================
 function _worldTurnForBattle() {
+  const player = Game.state.player;
   triggerMonsterTurn(player.gridR, player.gridC, true); // Q3(a): 即時処理
 }
 
@@ -317,13 +331,14 @@ function _worldTurnForBattle() {
 // バトル終了
 // =====================
 function endBattle(result) {
+  const battleState = Game.state.battleState;
   for (const e of battleState.enemies)   e.battleLocked = false;
   for (const a of battleState.allyUnits) a.battleLocked = false;
-  monsters = monsters.filter(m => m.hp > 0);
+  Game.state.monsters = Game.state.monsters.filter(m => m.hp > 0);
 
   const killerRace = battleState.enemyRace;
-  battleState         = null;
-  battleNeedsRerender = false;
+  Game.state.battleState         = null;
+  Game.flags.battleNeedsRerender = false;
   document.getElementById('battle-panel').hidden = true;
 
   updateOnCrystal();
@@ -337,7 +352,8 @@ function endBattle(result) {
 
   if (result === 'win') {
     logMessage('⚔ 戦闘勝利！', 'battle');
-    const cr = crystalAtCell[player.gridR][player.gridC];
+    const player = Game.state.player;
+    const cr = Game.state.crystalAtCell[player.gridR][player.gridC];
     if (cr && cr.owner !== 'human') {
       cr.owner = 'human'; cr.spawnTimer = 0;
       logMessage(`💎 クリスタルを占領！`, 'occupy');
@@ -353,7 +369,8 @@ function endBattle(result) {
 // 死亡処理
 // =====================
 function playerDeath(killerRace) {
-  const humanCrystals = crystals.filter(c => c.owner === 'human');
+  const player = Game.state.player;
+  const humanCrystals = Game.state.crystals.filter(c => c.owner === 'human');
   if (humanCrystals.length === 1) {
     // 最後の1拠点 → 敵に陥落させて敗北判定に委ねる
     humanCrystals[0].owner      = killerRace;
@@ -372,9 +389,9 @@ function playerDeath(killerRace) {
 // 勝敗判定
 // =====================
 function checkWinLoss() {
-  if (gameEnded) return false;
-  const humanCr   = crystals.filter(c => c.owner === 'human').length;
-  const monsterCr = crystals.filter(c =>
+  if (Game.flags.gameEnded) return false;
+  const humanCr   = Game.state.crystals.filter(c => c.owner === 'human').length;
+  const monsterCr = Game.state.crystals.filter(c =>
     c.owner === 'goblin' || c.owner === 'lizard' || c.owner === 'ogre'
   ).length;
   if (humanCr === 0) {
@@ -389,11 +406,11 @@ function checkWinLoss() {
 }
 
 function showResult(kind, detail) {
-  gameEnded = true;
+  Game.flags.gameEnded = true;
   const title = document.getElementById('result-title');
   title.textContent = kind === 'win' ? '🎉 VICTORY' : '💀 DEFEAT';
   title.className   = 'result-title ' + (kind === 'win' ? 'result-win' : 'result-lose');
-  document.getElementById('result-detail').textContent = `${detail}（${worldTurn} ターン）`;
+  document.getElementById('result-detail').textContent = `${detail}（${Game.state.worldTurn} ターン）`;
   document.getElementById('result-screen').hidden = false;
   logMessage(kind === 'win' ? '🎉 VICTORY！' : '💀 DEFEAT...', 'system');
 }
@@ -402,10 +419,10 @@ function showResult(kind, detail) {
 // ボタンイベント登録
 // =====================
 document.getElementById('btn-fight').addEventListener('click', () => {
-  if (monstersAnimating || !battleState) return;
-  if (battleState.selectedTarget !== null) battleAttack(battleState.selectedTarget);
+  if (Game.flags.monstersAnimating || !Game.state.battleState) return;
+  if (Game.state.battleState.selectedTarget !== null) battleAttack(Game.state.battleState.selectedTarget);
 });
 document.getElementById('btn-flee').addEventListener('click', () => {
-  if (monstersAnimating || !battleState) return;
+  if (Game.flags.monstersAnimating || !Game.state.battleState) return;
   battleFlee();
 });

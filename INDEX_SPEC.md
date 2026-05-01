@@ -349,20 +349,23 @@ assets/crystals/
 `<script>` は index.html から**以下の順**で読み込む（依存順）：
 
 ```
-1.  js/config.js       定数・数学ヘルパー・ユニット定義・相性補正・スプライト画像ロード
-2.  js/sprites.js      ドット絵スプライト定義（32×32 インデックス配列＋パレット）・drawSpriteAt()
-3.  js/maze.js         迷路生成・BFS経路探索
-4.  js/player.js       プレイヤー状態・移動・回復・装備
-5.  js/monsters.js     ユニットAI（領土争奪・アグロ・バトル接触）
-6.  js/crystals.js     クリスタル管理・連結判定・スポーン
-7.  js/render3d.js     レイキャスト描画・スプライト描画
-8.  js/minimap.js      ミニマップ描画・全体マップ（Mキー）
-9.  js/battle.js       バトルロジック・勝敗判定・死亡処理
-10. js/shop.js         ショップロジック・回復処理・onCrystal管理
-11. js/ui.js           Status/Factions/Message Log 描画
-12. js/input.js        キー入力・ホイール入力
-13. js/main.js         ゲームループ・init・newMaze
+1.  js/config.js       定数・数学ヘルパー・ユニット定義・相性補正・スプライト画像ロード・shuffle/hpColorFor/hexToRgb・cellToBlock 逆引き表
+2.  js/state.js        全可変状態の集約（Game.state / Game.flags）・JSDoc typedef 群
+3.  js/sprites.js      ドット絵スプライト定義（32×32 インデックス配列＋パレット）・drawSpriteAt()
+4.  js/maze.js         迷路生成・BFS経路探索・gridToWalls
+5.  js/player.js       プレイヤー状態・移動・回転・装備（Game.state.player）
+6.  js/monsters.js     ユニットAI（領土争奪・アグロ・バトル接触）・makeUnit
+7.  js/crystals.js     クリスタル管理・連結判定（BFS）・スポーン・lookup 構築（crystalAtCell / crystalByBlock）
+8.  js/render3d.js     レイキャスト（水平/垂直壁分割で半カット）・スプライト描画（バッファ再利用）
+9.  js/minimap.js      ミニマップ描画・全体マップ（Mキー）・drawCrystalsOnMinimap・groupMonstersByCell
+10. js/battle.js       バトルロジック・陣形編成・勝敗判定・死亡処理
+11. js/shop.js         ショップロジック・回復処理・onCrystal管理
+12. js/ui.js           Status/Factions/Message Log 描画・logMessage
+13. js/input.js        キー入力・ホイール入力
+14. js/main.js         ゲームループ・init・newMaze・静的UIハンドラ登録
 ```
+
+`css/style.css` にページ reset・全モーダル・パネル・バトル UI のスタイルを集約する。
 
 ### レンダリング定数（config.js）
 
@@ -377,6 +380,49 @@ MOVE_FRAMES = 8              // 1マス移動フレーム数
 ROT_SPRING_K = 0.10          // 回転スプリング係数（0.10=なめらか〜0.40=キビキビ）
 SAME_CELL_DEPTH_OFFSET = 8   // 同一マス複数ユニットの奥行きオフセット（world単位）
 MINIMAP_VIEW_CELLS = 7       // ミニマップ表示範囲
+```
+
+### 状態管理規約（Game 名前空間）
+
+実行時に変わる値はすべて `Game.state.*` / `Game.flags.*` 経由で参照する（[js/state.js](js/state.js) で定義）。純粋な定数（`CANVAS_W` / `FACTIONS` / `UNIT_DEFS` 等）は `config.js` に置く。
+
+```js
+Game.state = {
+  // World
+  grid, walls, wallsH, wallsV, explored,
+  // Entities
+  monsters, crystals, crystalAtCell, crystalByBlock, humanAutoSpawnIndex,
+  // Player
+  player,
+  // Turn / Log
+  worldTurn, messageLog,
+  // Modal / interaction
+  battleState, shopItems, shopSelectedIdx, onCrystal,
+};
+Game.flags = {
+  monstersAnimating, pendingBumpCheck, battleNeedsRerender,
+  gameEnded, fullMapOpen, restartConfirmOpen,
+};
+```
+
+主要な型は `state.js` の JSDoc `@typedef` で定義（`Crystal` / `Monster` / `Player` / `BattleState` / `LogEntry` / `Wall` / `EquipItem`）。
+
+**lookup テーブル（O(1) 参照）**
+- `Game.state.crystalAtCell[r][c]` … (r,c) 位置のクリスタル
+- `Game.state.crystalByBlock[bR][bC]` … (bR,bC) ブロックのクリスタル
+- `cellToBlock[r][c]` … (r,c) セル → 所属ブロック `[bR,bC]`（config.js の定数）
+
+**描画最適化**
+- 壁は `Game.state.wallsH` / `wallsV` に水平・垂直で分割保存。`castRays` はレイ方向の符号で半分を即カット（実測 2.09x）
+- `_hitsBuffer`（render3d.js）を固定長 RAY_COUNT で再利用、毎フレーム配列を新規作成しない
+- `_spritesBuffer` も同様に再利用
+
+ブラウザコンソールで状態の即時確認が可能：
+
+```js
+Game.state                                      // 全状態スナップショット
+Game.state.crystals.map(c => [c.r, c.c, c.owner])
+JSON.stringify(Game.state, null, 2)             // セーブデータ相当
 ```
 
 ### モンスターAI構造

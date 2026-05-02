@@ -356,6 +356,7 @@ function endBattle(result) {
     const cr = Game.state.crystalAtCell[player.gridR][player.gridC];
     if (cr && cr.owner !== 'human') {
       cr.owner = 'human'; cr.spawnTimer = 0;
+      cr.discovered = true;
       logMessage(`💎 クリスタルを占領！`, 'occupy');
     }
   } else if (result === 'flee') {

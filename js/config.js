@@ -46,7 +46,16 @@ const RETRO_STEP     = 5;
 const TEXTURE_PERIOD = 40;
 const TEXTURE_PILLAR = 8;
 
-const MINIMAP_VIEW_CELLS = 7;
+const MINIMAP_VIEW_CELLS    = 7;
+const MINIMAP_DETAIL_RADIUS = 2;  // プレイヤー中心の詳細表示半径（チェビシェフ距離・5×5相当）
+
+// クリスタルグロー（床と壁を陣営色で照らす）
+const CRYSTAL_GLOW_RADIUS_CELLS = 3.0;   // 半径（セル単位）
+const CRYSTAL_GLOW_ALPHA_CENTER = 0.65;  // 中心の濃度（線形フォールオフ）
+const CRYSTAL_GLOW_WALL_RATIO   = 0.7;   // 壁の濃度比（白飛び抑制）
+
+// 床の陣営占有色（ブロック支配を3D側で可視化）
+const FLOOR_FACTION_TINT_ALPHA  = 0.15;  // 床に乗せる陣営色の濃度（中立は塗らない）
 
 // =====================
 // Factions（4 陣営 + 中立）
@@ -95,6 +104,20 @@ const cellToBlock = (() => {
           t[r][c] = [bR, bC];
         }
       }
+    }
+  }
+  return t;
+})();
+
+// 床描画ホットループ用：セル → ブロック平坦インデックス（0〜24、ブロック外は 25 = sentinel）
+// ブロック陣営色テーブルの末尾に常に 0 のスロットを置けば条件分岐ゼロで加算できる
+const CELL_BLOCK_NONE = 25;
+const cellBlockIdx = (() => {
+  const t = new Uint8Array(GRID_SIZE * GRID_SIZE);
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const b = cellToBlock[r][c];
+      t[r * GRID_SIZE + c] = b ? b[0] * 5 + b[1] : CELL_BLOCK_NONE;
     }
   }
   return t;

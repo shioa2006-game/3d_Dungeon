@@ -55,6 +55,7 @@ function initCrystals() {
         blockR: bR,
         blockC: bC,
         valid:  false,   // updateCrystalConnectivity() で確定
+        discovered: owner === 'human',  // 初期人間族クリスタルは発見済み
       });
     }
   }

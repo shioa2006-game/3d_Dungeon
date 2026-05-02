@@ -80,16 +80,169 @@ function castRays() {
   return _hitsBuffer;
 }
 
+// =====================
+// 床描画（ピクセル単位）
+//
+// 各床ピクセルから逆算したワールド座標で、近傍クリスタルの陣営色を
+// 加算合成（中心α 0.55 / 2乗フォールオフ）する。Step 3 で陣営占有色も同居予定。
+// ImageData は再利用してアロケーションを避ける。
+// =====================
+const _floorBaseR = 20, _floorBaseG = 15, _floorBaseB = 10;
+let _floorImageData = null;
+const _rayCos  = new Float32Array(VIEW3D.w);
+const _raySin  = new Float32Array(VIEW3D.w);
+const _cosCorr = new Float32Array(VIEW3D.w);
+const _glowsBuf = [];
+let   _nGlows   = 0;
+
+// ブロック陣営占有色の事前計算バッファ（5×5 = 25 + sentinel 26番目）
+// 中立は 0、sentinel（ブロック外セル）も 0 を入れて常に加算（条件分岐を避ける）
+const _blockTintR = new Float32Array(26);
+const _blockTintG = new Float32Array(26);
+const _blockTintB = new Float32Array(26);
+
+function drawFloor() {
+  const player = Game.state.player;
+  const R = VIEW3D;
+  const fw = R.w | 0;
+  const fh = (R.h / 2) | 0;
+
+  if (!_floorImageData) _floorImageData = ctx.createImageData(fw, fh);
+  const data = _floorImageData.data;
+
+  // 列単位のレイ方向と歪み補正（FOVに沿って画面幅で線形補間）
+  const half = player.fov / 2;
+  const base = player.visualAngle - half;
+  const span = player.fov;
+  const denom = fw - 1;
+  for (let x = 0; x < fw; x++) {
+    const rayAngle = base + span * x / denom;
+    _rayCos[x]  = Math.cos(rayAngle);
+    _raySin[x]  = Math.sin(rayAngle);
+    _cosCorr[x] = Math.cos(rayAngle - player.visualAngle);
+  }
+
+  const glowR  = CRYSTAL_GLOW_RADIUS_CELLS * CELL_SIZE;
+  const glowR2 = glowR * glowR;
+  const glowA  = CRYSTAL_GLOW_ALPHA_CENTER;
+  const tintA  = FLOOR_FACTION_TINT_ALPHA;
+  const px = player.pos.x;
+  const py = player.pos.y;
+
+  // 25ブロックの陣営占有色 × α を事前計算（中立は 0 → 常に加算）
+  for (let bR = 0; bR < 5; bR++) {
+    for (let bC = 0; bC < 5; bC++) {
+      const idx = bR * 5 + bC;
+      const cr = Game.state.crystalByBlock[bR][bC];
+      if (cr && cr.owner !== 'neutral') {
+        const [tR, tG, tB] = hexToRgb(FACTIONS[cr.owner].color);
+        _blockTintR[idx] = tR * tintA;
+        _blockTintG[idx] = tG * tintA;
+        _blockTintB[idx] = tB * tintA;
+      } else {
+        _blockTintR[idx] = 0;
+        _blockTintG[idx] = 0;
+        _blockTintB[idx] = 0;
+      }
+    }
+  }
+
+  // 視錐台（FOV + αマージン）に入るクリスタルのみを内側ループに渡す
+  _nGlows = 0;
+  for (const cr of Game.state.crystals) {
+    const f = FACTIONS[cr.owner];
+    if (!f) continue;
+    const wx = (cr.c + 0.5) * CELL_SIZE;
+    const wy = (cr.r + 0.5) * CELL_SIZE;
+    const dx = wx - px, dy = wy - py;
+    const d2 = dx * dx + dy * dy;
+
+    // クリスタルがプレイヤーから glowR より外なら FOV+αマージンでカット
+    if (d2 > glowR2) {
+      const D = Math.sqrt(d2);
+      const rel = Math.abs(normalizeAngle(Math.atan2(dy, dx) - player.visualAngle));
+      if (rel > half + Math.asin(glowR / D)) continue;
+    }
+
+    const [cR, cG, cB] = hexToRgb(f.color);
+    let g = _glowsBuf[_nGlows];
+    if (!g) { g = { wx, wy, cR, cG, cB }; _glowsBuf.push(g); }
+    else    { g.wx = wx; g.wy = wy; g.cR = cR; g.cG = cG; g.cB = cB; }
+    _nGlows++;
+  }
+
+  // 1行目（地平線）はベース色だけ
+  let idx = 0;
+  for (let x = 0; x < fw; x++) {
+    data[idx++] = _floorBaseR;
+    data[idx++] = _floorBaseG;
+    data[idx++] = _floorBaseB;
+    data[idx++] = 255;
+  }
+
+  // 2行目以降：各ピクセル → ワールド座標 → 陣営占有色 + クリスタルグロー加算
+  for (let y = 1; y < fh; y++) {
+    const corrDist = WALL_HEIGHT_CONST / (2 * y);
+    for (let x = 0; x < fw; x++) {
+      const actualDist = corrDist / _cosCorr[x];
+      const wx = px + actualDist * _rayCos[x];
+      const wy = py + actualDist * _raySin[x];
+
+      let r = _floorBaseR, g = _floorBaseG, b = _floorBaseB;
+
+      // 陣営占有色（cellBlockIdx の sentinel スロットで条件分岐を回避）
+      const gridR = (wy / CELL_SIZE) | 0;
+      const gridC = (wx / CELL_SIZE) | 0;
+      if (gridR >= 0 && gridR < GRID_SIZE && gridC >= 0 && gridC < GRID_SIZE) {
+        const bIdx = cellBlockIdx[gridR * GRID_SIZE + gridC];
+        r += _blockTintR[bIdx];
+        g += _blockTintG[bIdx];
+        b += _blockTintB[bIdx];
+      }
+
+      // クリスタルグロー加算
+      for (let i = 0; i < _nGlows; i++) {
+        const cg = _glowsBuf[i];
+        const dx = wx - cg.wx, dy = wy - cg.wy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > glowR2) continue;
+        const t = 1 - Math.sqrt(d2) / glowR;  // 線形フォールオフ
+        const inten = t * glowA;
+        r += cg.cR * inten;
+        g += cg.cG * inten;
+        b += cg.cB * inten;
+      }
+
+      if (r > 255) r = 255;
+      if (g > 255) g = 255;
+      if (b > 255) b = 255;
+
+      data[idx++] = r;
+      data[idx++] = g;
+      data[idx++] = b;
+      data[idx++] = 255;
+    }
+  }
+
+  ctx.putImageData(_floorImageData, R.x, R.y + fh);
+}
+
 function drawView3D(hits) {
   const player = Game.state.player;
   const R = VIEW3D;
   ctx.save();
   ctx.beginPath(); ctx.rect(R.x, R.y, R.w, R.h); ctx.clip();
 
-  fillRect(R.x, R.y,           R.w, R.h / 2, 15, 18, 25);
-  fillRect(R.x, R.y + R.h / 2, R.w, R.h / 2, 20, 15, 10);
+  fillRect(R.x, R.y, R.w, R.h / 2, 15, 18, 25);
+  drawFloor();
 
-  const colW = R.w / RAY_COUNT;
+  const colW   = R.w / RAY_COUNT;
+  const px     = player.pos.x;
+  const py     = player.pos.y;
+  const glowR  = CRYSTAL_GLOW_RADIUS_CELLS * CELL_SIZE;
+  const glowR2 = glowR * glowR;
+  const glowAW = CRYSTAL_GLOW_ALPHA_CENTER * CRYSTAL_GLOW_WALL_RATIO;
+
   for (let i = 0; i < hits.length; i++) {
     const h = hits[i];
     depthBuffer[i] = Infinity;
@@ -110,6 +263,27 @@ function drawView3D(hits) {
     const pillar = (texU % TEXTURE_PERIOD) < TEXTURE_PILLAR;
     let cr = base[0] * shade, cg = base[1] * shade, cb = base[2] * shade;
     if (pillar) { cr *= 0.5; cg *= 0.5; cb *= 0.5; }
+
+    // 壁ヒット点のクリスタルグロー加算
+    if (_nGlows > 0) {
+      const wx = px + Math.cos(h.rayAngle) * h.dist;
+      const wy = py + Math.sin(h.rayAngle) * h.dist;
+      for (let k = 0; k < _nGlows; k++) {
+        const cgw = _glowsBuf[k];
+        const dx = wx - cgw.wx, dy = wy - cgw.wy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > glowR2) continue;
+        const t = 1 - Math.sqrt(d2) / glowR;
+        const inten = t * glowAW;
+        cr += cgw.cR * inten;
+        cg += cgw.cG * inten;
+        cb += cgw.cB * inten;
+      }
+      if (cr > 255) cr = 255;
+      if (cg > 255) cg = 255;
+      if (cb > 255) cb = 255;
+    }
+
     fillRect(x0, y0, colW + 0.5, wallH, cr | 0, cg | 0, cb | 0);
   }
 

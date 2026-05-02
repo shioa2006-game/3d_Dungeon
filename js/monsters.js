@@ -166,6 +166,7 @@ function updateTerritoryAI(foughtThisTurn) {
         const prevOwner = cr.owner;
         cr.owner = m.faction;
         cr.spawnTimer = 0;
+        if (m.faction === 'human') cr.discovered = true;
         updateCrystalConnectivity();          // 連結判定を再計算
         m.path = []; m.pathRefreshTimer = PATH_REFRESH;
         m.targetCrystal = randomEnemyCrystal(m);

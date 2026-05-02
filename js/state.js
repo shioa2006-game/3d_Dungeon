@@ -12,6 +12,7 @@
  * @property {number} blockR         所属ブロック行（0..4）
  * @property {number} blockC         所属ブロック列（0..4）
  * @property {boolean} valid         本拠から連結しているか（飛び地は false）
+ * @property {boolean} discovered    一度でも人間族所有になったか（マップ表示判定用、永続）
  */
 
 /**

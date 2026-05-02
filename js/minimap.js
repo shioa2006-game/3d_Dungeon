@@ -43,6 +43,16 @@ function drawCrystalsOnMinimap() {
   const viewTop  = pcy - half;
 
   for (const cr of Game.state.crystals) {
+    // 発見済み（人間族所有を経験した）クリスタルのみ表示
+    if (!cr.discovered) continue;
+
+    // プレイヤー中心の円内（チェビシェフ距離）フィルタ + 境界フェード
+    const cdx = (cr.c + 0.5) - pcx;
+    const cdy = (cr.r + 0.5) - pcy;
+    const cheb  = Math.max(Math.abs(cdx), Math.abs(cdy));
+    const alpha = clamp(MINIMAP_DETAIL_RADIUS + 1 - cheb, 0, 1);
+    if (alpha <= 0) continue;
+
     const gx = cr.c + 0.5 - viewLeft;
     const gy = cr.r + 0.5 - viewTop;
     if (gx < 0 || gx > MINIMAP_VIEW_CELLS ||
@@ -52,6 +62,9 @@ function drawCrystalsOnMinimap() {
     const sy   = mapY0 + gy * cellDraw;
     const f    = FACTIONS[cr.owner];
     const r    = cellDraw * 0.30;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
 
     // 外縁（黒枠・三角形）
     ctx.beginPath();
@@ -76,6 +89,8 @@ function drawCrystalsOnMinimap() {
     ctx.arc(sx, sy - r * 0.55, r * 0.22, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.fill();
+
+    ctx.restore();
   }
 }
 
@@ -102,11 +117,19 @@ function _drawBadge(cx, cy, count) {
   ctx.fillText(count > 9 ? '9+' : String(count), cx, cy);
 }
 
-function drawUnitsOnMinimap(mapX0, mapY0, viewLeft, viewTop, cellDraw) {
+function drawUnitsOnMinimap(mapX0, mapY0, viewLeft, viewTop, cellDraw, pcx, pcy) {
   const sz = cellDraw * 0.92;
 
   for (const [key, group] of groupMonstersByCell()) {
     const [gr, gc] = key.split(',').map(Number);
+
+    // プレイヤー中心の円内（チェビシェフ距離）フィルタ + 境界フェード
+    const cdx = (gc + 0.5) - pcx;
+    const cdy = (gr + 0.5) - pcy;
+    const cheb  = Math.max(Math.abs(cdx), Math.abs(cdy));
+    const alpha = clamp(MINIMAP_DETAIL_RADIUS + 1 - cheb, 0, 1);
+    if (alpha <= 0) continue;
+
     const gx = gc + 0.5 - viewLeft;
     const gy = gr + 0.5 - viewTop;
     // Clip check (with 1-cell margin — ctx.clip handles the rest)
@@ -116,11 +139,15 @@ function drawUnitsOnMinimap(mapX0, mapY0, viewLeft, viewTop, cellDraw) {
     const cx = mapX0 + gx * cellDraw;
     const cy = mapY0 + gy * cellDraw;
     const rep = group[0];
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
     drawSpriteAt(rep.type, rep.hp / rep.maxHp, cx - sz / 2, cy - sz / 2, sz);
 
     if (group.length > 1) {
       _drawBadge(cx + sz / 2 - 6, cy - sz / 2 + 6, group.length);
     }
+    ctx.restore();
   }
 }
 
@@ -163,12 +190,9 @@ function drawMinimap() {
       } else if (grid[gr][gc] === 1) {
         fillRect(sx, sy, cellDraw + 1, cellDraw + 1, 45, 55, 52);
       } else {
+        // 陣営占有色は3Dビューの床に移植（##12 Step 3）
+        // 詳細な勢力図は M キー全体マップで確認する
         fillRect(sx, sy, cellDraw + 1, cellDraw + 1, 18, 18, 18);
-        const faction = getFactionForCell(gr, gc);
-        if (faction) {
-          ctx.fillStyle = faction.color + '6e';
-          ctx.fillRect(sx, sy, cellDraw + 1, cellDraw + 1);
-        }
       }
     }
   }
@@ -183,11 +207,23 @@ function drawMinimap() {
     if (sy >= R.y && sy <= R.y + R.h) drawLine(R.x, sy, R.x + R.w, sy, 60, 80, 70, 0.4, 1);
   }
 
+  // 詳細表示範囲の境界（プレイヤー中心の円・うっすら表示）
+  const detailCx = mapX0 + half * cellDraw;
+  const detailCy = mapY0 + half * cellDraw;
+  const detailR  = (MINIMAP_DETAIL_RADIUS + 0.5) * cellDraw;
+  ctx.beginPath();
+  ctx.arc(detailCx, detailCy, detailR, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(180, 200, 200, 0.20)';
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
   // クリスタル（ユニットより下のレイヤー）
   drawCrystalsOnMinimap();
 
   // ユニット
-  drawUnitsOnMinimap(mapX0, mapY0, viewLeft, viewTop, cellDraw);
+  drawUnitsOnMinimap(mapX0, mapY0, viewLeft, viewTop, cellDraw, pcx, pcy);
 
   // プレイヤースプライト（○の置き換え）
   const px  = mapX0 + (pcx - viewLeft) * cellDraw;
@@ -313,7 +349,7 @@ function drawFullMap() {
           }
         }
 
-        // ホームブロックの枠 + ★マーカー
+        // ホームブロックの枠
         if (isHome) {
           if (owner === 'human') {
             // 所有中：青白枠
@@ -326,12 +362,6 @@ function drawFullMap() {
             c.lineWidth = 2;
             c.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
           }
-          // ★テキスト（左上隅）
-          c.fillStyle    = owner === 'human' ? 'rgba(180, 220, 255, 1.0)' : 'rgba(255, 90, 90, 1.0)';
-          c.font         = 'bold 11px monospace';
-          c.textAlign    = 'left';
-          c.textBaseline = 'top';
-          c.fillText('★', bx + 3, by + 2);
         }
       }
     }
@@ -356,8 +386,9 @@ function drawFullMap() {
   }
   // ── ここまで A案 ──
 
-  // クリスタル（三角形）
+  // クリスタル（三角形）— 発見済みのみ
   for (const cr of Game.state.crystals) {
+    if (!cr.discovered) continue;
     const sx = mapX0 + (cr.c + 0.5) * cellDraw;
     const sy = mapY0 + (cr.r + 0.5) * cellDraw;
     const f  = FACTIONS[cr.owner];

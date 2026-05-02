@@ -103,6 +103,7 @@ function checkCrystalClaim() {
   if (!cr || cr.owner === 'human') return;
   cr.owner      = 'human';
   cr.spawnTimer = 0;
+  cr.discovered = true;
   updateCrystalConnectivity();   // 連結判定を再計算
   updateOnCrystal();
   logMessage(`💎 クリスタルを人間族に転換！`, 'occupy');

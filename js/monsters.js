@@ -171,6 +171,11 @@ function updateTerritoryAI(foughtThisTurn) {
         m.path = []; m.pathRefreshTimer = PATH_REFRESH;
         m.targetCrystal = randomEnemyCrystal(m);
         m.targetRefreshTimer = 0;
+        GameLog.event('crystal_capture', {
+          r: cr.r, c: cr.c, blockR: cr.blockR, blockC: cr.blockC,
+          fromOwner: prevOwner, toOwner: m.faction,
+          capturer: { kind: 'unit', race: m.type, faction: m.faction },
+        });
         if (prevOwner === 'human') {
           logMessage(`💥 人間族クリスタルが${FACTIONS[m.faction].name}に占領された！`, 'occupy');
         }
@@ -271,9 +276,20 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
     for (const e of Game.state.monsters) {
       if (e === m || e.hp <= 0 || e.faction === m.faction || e.battleLocked) continue;
       if (e.gridR !== m.gridR || e.gridC !== m.gridC) continue;
-      e.hp -= m.atk * getAffinityMult(m.type, e.type);
+      const compatMul = getAffinityMult(m.type, e.type);
+      const dmg       = m.atk * compatMul;
+      const hpBefore  = e.hp;
+      e.hp -= dmg;
       foughtThisTurn.add(m);
       foughtThisTurn.add(e);
+      if (hpBefore > 0 && e.hp <= 0) {
+        GameLog.event('ai_battle_kill', {
+          r: e.gridR, c: e.gridC,
+          attackerType: m.type,    defenderType: e.type,
+          attackerFaction: m.faction, defenderFaction: e.faction,
+          compatMul, finalDamage: dmg,
+        });
+      }
     }
   }
   // 死亡ユニット除去
@@ -338,8 +354,29 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
         a.targetR = -1; a.targetC = -1;
         b.targetR = -1; b.targetC = -1;
         if (a.faction !== b.faction) {
-          a.hp -= b.atk * getAffinityMult(b.type, a.type);
-          b.hp -= a.atk * getAffinityMult(a.type, b.type);
+          const aHpBefore = a.hp, bHpBefore = b.hp;
+          const aMul = getAffinityMult(b.type, a.type);
+          const bMul = getAffinityMult(a.type, b.type);
+          const aDmg = b.atk * aMul;
+          const bDmg = a.atk * bMul;
+          a.hp -= aDmg;
+          b.hp -= bDmg;
+          if (aHpBefore > 0 && a.hp <= 0) {
+            GameLog.event('ai_battle_kill', {
+              r: a.gridR, c: a.gridC,
+              attackerType: b.type, defenderType: a.type,
+              attackerFaction: b.faction, defenderFaction: a.faction,
+              compatMul: aMul, finalDamage: aDmg,
+            });
+          }
+          if (bHpBefore > 0 && b.hp <= 0) {
+            GameLog.event('ai_battle_kill', {
+              r: b.gridR, c: b.gridC,
+              attackerType: a.type, defenderType: b.type,
+              attackerFaction: a.faction, defenderFaction: b.faction,
+              compatMul: bMul, finalDamage: bDmg,
+            });
+          }
         }
       }
     }
@@ -373,6 +410,9 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
 
   // ⑥ クリスタルスポーンタイマー
   updateCrystals();
+
+  // ⑦ ログ用 timeline_snapshot（10ターン毎）
+  GameLog.snapshot();
 
   // 通常移動時のみバンプチェックを予約（バトル中ターンや即時処理では発火しない）
   if (!skipAnimation) Game.flags.pendingBumpCheck = true;

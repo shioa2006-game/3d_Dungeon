@@ -402,6 +402,54 @@ canvas { display: block; }
 /* =====================
    Result Screen
    ===================== */
+/* =====================
+   Respawn Overlay（死亡 → 復活待機）
+   ===================== */
+#respawn-overlay[hidden] { display: none; }
+
+#respawn-overlay {
+  position: absolute;
+  left: 0; top: 0;
+  width: 740px; height: 500px;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 28;
+  font-family: monospace;
+  pointer-events: none;
+}
+
+.respawn-inner { text-align: center; color: #ccc; }
+
+.respawn-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #ff5566;
+  margin-bottom: 18px;
+  text-shadow: 0 0 12px rgba(255, 85, 102, 0.4);
+}
+
+.respawn-countdown {
+  font-size: 22px;
+  color: #ddd;
+  margin-bottom: 14px;
+}
+
+.respawn-countdown #respawn-counter {
+  display: inline-block;
+  min-width: 32px;
+  font-size: 36px;
+  font-weight: bold;
+  color: #ffd866;
+  margin-left: 4px;
+}
+
+.respawn-hint {
+  font-size: 12px;
+  color: #888;
+}
+
 #result-screen[hidden] { display: none; }
 
 #result-screen {

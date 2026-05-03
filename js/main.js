@@ -79,10 +79,12 @@ function newMaze() {
   Game.state.messageLog.length   = 0;
   Game.flags.fullMapOpen         = false;
   Game.flags.restartConfirmOpen  = false;
+  Game.state.respawnCountdown    = 0;
   document.getElementById('battle-panel').hidden    = true;
   document.getElementById('shop-modal').hidden      = true;
   document.getElementById('result-screen').hidden   = true;
   document.getElementById('restart-confirm').hidden = true;
+  _updateRespawnUI();
 
   generateMazeUntilValid();   // grid/walls/crystals を一括確定（initCrystals 内包）
 
@@ -98,6 +100,8 @@ function newMaze() {
   initPlayerStats();
   spawnPlayerAtHome();
   updateOnCrystal();
+
+  GameLog.start();
 }
 
 // =====================
@@ -107,6 +111,55 @@ initExplored();
 generateMazeUntilValid();   // grid/walls/crystals を一括確定
 spawnMonsters();
 initPlayerStats();
+GameLog.start();
+
+// =====================
+// 復活待機オーバーレイ UI
+// =====================
+function _updateRespawnUI() {
+  const overlay = document.getElementById('respawn-overlay');
+  if (!overlay) return;
+  if (Game.state.respawnCountdown > 0) {
+    overlay.hidden = false;
+    document.getElementById('respawn-counter').textContent =
+      String(Game.state.respawnCountdown);
+  } else {
+    overlay.hidden = true;
+  }
+}
+
+// =====================
+// 復活待機の進行（1秒1ターン）
+// 死亡中は ワールドターンを進めながら GAMEOVER 判定し、最後に本拠地復活
+// =====================
+function _advanceRespawnIfDue() {
+  if (Game.state.respawnCountdown <= 0 || Game.flags.gameEnded) return;
+  const now = performance.now();
+  if (now < Game.state.respawnNextTickAt) return;
+
+  // 1ターン進行（アニメーションは省略：UI で「N → N-1」だけ見せたい）
+  // プレイヤーは戦線に存在しない扱いにするため、グリッド外の値を渡して
+  // 死亡セルを「予約済み」にしない（モンスターがそこを通過・占領できる）
+  triggerMonsterTurn(-1, -1, true);
+  Game.state.respawnCountdown--;
+  _updateRespawnUI();
+
+  // 詰みなら即打ち切り
+  if (checkWinLoss()) {
+    Game.state.respawnCountdown = 0;
+    _updateRespawnUI();
+    return;
+  }
+
+  if (Game.state.respawnCountdown === 0) {
+    // 復活：HPを再計算し、本拠地優先で配置
+    Game.state.player.hp = playerStats().hp;
+    spawnPlayerAtHome();
+    logMessage('✨ 拠点で復活', 'system');
+  } else {
+    Game.state.respawnNextTickAt = now + 1000;
+  }
+}
 
 // =====================
 // Game loop
@@ -114,6 +167,8 @@ initPlayerStats();
 function gameLoop() {
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
   fillRect(0, 0, CANVAS_W, CANVAS_H, 10, 10, 10);
+
+  _advanceRespawnIfDue();
 
   handleInput();
   updatePlayer();

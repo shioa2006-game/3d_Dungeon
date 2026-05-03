@@ -1,0 +1,3503 @@
+{
+  "schemaVersion": 1,
+  "sessionId": "25c65351-c54c-4020-b7b8-140abaf8cc53",
+  "startedAt": "2026-05-03T03:43:13.136Z",
+  "endedAt": "2026-05-03T03:43:54.885Z",
+  "result": "GAMEOVER",
+  "totalTurns": 92,
+  "config": {
+    "gridSize": 51,
+    "unitStats": {
+      "human": {
+        "hp": 35,
+        "atk": 5,
+        "faction": "human"
+      },
+      "elf": {
+        "hp": 30,
+        "atk": 6,
+        "faction": "human"
+      },
+      "dwarf": {
+        "hp": 40,
+        "atk": 4,
+        "faction": "human"
+      },
+      "goblin": {
+        "hp": 28,
+        "atk": 5,
+        "faction": "goblin"
+      },
+      "lizard": {
+        "hp": 28,
+        "atk": 7,
+        "faction": "lizard"
+      },
+      "ogre": {
+        "hp": 44,
+        "atk": 6,
+        "faction": "ogre"
+      }
+    },
+    "spawnIntervals": {
+      "human": 13,
+      "goblin": 8,
+      "lizard": 13,
+      "ogre": 18
+    },
+    "compatibilityTable": [
+      "human-goblin",
+      "elf-lizard",
+      "dwarf-ogre",
+      "goblin-ogre",
+      "lizard-goblin",
+      "ogre-lizard"
+    ],
+    "playerInitial": {
+      "hp": 40,
+      "atk": 7,
+      "rec": 5,
+      "agi": 10
+    },
+    "unitCapPerCrystal": 5,
+    "unitCapMax": 100
+  },
+  "events": [
+    {
+      "crystals": [
+        {
+          "r": 3,
+          "c": 7,
+          "blockR": 0,
+          "blockC": 0,
+          "owner": "human"
+        },
+        {
+          "r": 9,
+          "c": 13,
+          "blockR": 0,
+          "blockC": 1,
+          "owner": "human"
+        },
+        {
+          "r": 4,
+          "c": 25,
+          "blockR": 0,
+          "blockC": 2,
+          "owner": "neutral"
+        },
+        {
+          "r": 7,
+          "c": 32,
+          "blockR": 0,
+          "blockC": 3,
+          "owner": "goblin"
+        },
+        {
+          "r": 7,
+          "c": 42,
+          "blockR": 0,
+          "blockC": 4,
+          "owner": "goblin"
+        },
+        {
+          "r": 11,
+          "c": 8,
+          "blockR": 1,
+          "blockC": 0,
+          "owner": "human"
+        },
+        {
+          "r": 12,
+          "c": 17,
+          "blockR": 1,
+          "blockC": 1,
+          "owner": "neutral"
+        },
+        {
+          "r": 19,
+          "c": 28,
+          "blockR": 1,
+          "blockC": 2,
+          "owner": "neutral"
+        },
+        {
+          "r": 18,
+          "c": 31,
+          "blockR": 1,
+          "blockC": 3,
+          "owner": "neutral"
+        },
+        {
+          "r": 19,
+          "c": 43,
+          "blockR": 1,
+          "blockC": 4,
+          "owner": "goblin"
+        },
+        {
+          "r": 27,
+          "c": 4,
+          "blockR": 2,
+          "blockC": 0,
+          "owner": "neutral"
+        },
+        {
+          "r": 28,
+          "c": 13,
+          "blockR": 2,
+          "blockC": 1,
+          "owner": "neutral"
+        },
+        {
+          "r": 25,
+          "c": 29,
+          "blockR": 2,
+          "blockC": 2,
+          "owner": "neutral"
+        },
+        {
+          "r": 23,
+          "c": 38,
+          "blockR": 2,
+          "blockC": 3,
+          "owner": "neutral"
+        },
+        {
+          "r": 25,
+          "c": 45,
+          "blockR": 2,
+          "blockC": 4,
+          "owner": "neutral"
+        },
+        {
+          "r": 32,
+          "c": 9,
+          "blockR": 3,
+          "blockC": 0,
+          "owner": "lizard"
+        },
+        {
+          "r": 32,
+          "c": 11,
+          "blockR": 3,
+          "blockC": 1,
+          "owner": "neutral"
+        },
+        {
+          "r": 37,
+          "c": 23,
+          "blockR": 3,
+          "blockC": 2,
+          "owner": "neutral"
+        },
+        {
+          "r": 39,
+          "c": 36,
+          "blockR": 3,
+          "blockC": 3,
+          "owner": "neutral"
+        },
+        {
+          "r": 33,
+          "c": 49,
+          "blockR": 3,
+          "blockC": 4,
+          "owner": "ogre"
+        },
+        {
+          "r": 42,
+          "c": 7,
+          "blockR": 4,
+          "blockC": 0,
+          "owner": "lizard"
+        },
+        {
+          "r": 46,
+          "c": 17,
+          "blockR": 4,
+          "blockC": 1,
+          "owner": "lizard"
+        },
+        {
+          "r": 49,
+          "c": 27,
+          "blockR": 4,
+          "blockC": 2,
+          "owner": "neutral"
+        },
+        {
+          "r": 41,
+          "c": 33,
+          "blockR": 4,
+          "blockC": 3,
+          "owner": "ogre"
+        },
+        {
+          "r": 44,
+          "c": 41,
+          "blockR": 4,
+          "blockC": 4,
+          "owner": "ogre"
+        }
+      ],
+      "monsters": [
+        {
+          "type": "goblin",
+          "faction": "goblin",
+          "r": 7,
+          "c": 42
+        },
+        {
+          "type": "lizard",
+          "faction": "lizard",
+          "r": 32,
+          "c": 9
+        },
+        {
+          "type": "ogre",
+          "faction": "ogre",
+          "r": 33,
+          "c": 49
+        }
+      ],
+      "factionCrystals": {
+        "human": 3,
+        "goblin": 3,
+        "lizard": 3,
+        "ogre": 3,
+        "neutral": 13
+      },
+      "factionUnits": {
+        "human": 0,
+        "goblin": 1,
+        "lizard": 1,
+        "ogre": 1
+      },
+      "turn": 0,
+      "type": "session_start"
+    },
+    {
+      "r": 11,
+      "c": 8,
+      "unitType": "human",
+      "faction": "human",
+      "factionUnitCount": 1,
+      "factionUnitCap": 15,
+      "turn": 2,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 7,
+      "c": 42,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 2,
+      "factionUnitCap": 15,
+      "turn": 3,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 7,
+      "c": 32,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 3,
+      "factionUnitCap": 15,
+      "turn": 4,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 44,
+      "c": 41,
+      "unitType": "ogre",
+      "faction": "ogre",
+      "factionUnitCount": 2,
+      "factionUnitCap": 15,
+      "turn": 4,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 32,
+      "c": 11,
+      "blockR": 3,
+      "blockC": 1,
+      "fromOwner": "neutral",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 5,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 19,
+      "c": 43,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 4,
+      "factionUnitCap": 15,
+      "turn": 5,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 46,
+      "c": 17,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 2,
+      "factionUnitCap": 20,
+      "turn": 5,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 33,
+      "c": 49,
+      "unitType": "ogre",
+      "faction": "ogre",
+      "factionUnitCount": 3,
+      "factionUnitCap": 15,
+      "turn": 7,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 32,
+      "c": 9,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 3,
+      "factionUnitCap": 20,
+      "turn": 9,
+      "type": "unit_spawn"
+    },
+    {
+      "factionCrystals": {
+        "human": 3,
+        "goblin": 3,
+        "lizard": 4,
+        "ogre": 3,
+        "neutral": 12
+      },
+      "factionUnits": {
+        "human": 1,
+        "goblin": 4,
+        "lizard": 3,
+        "ogre": 3
+      },
+      "turn": 10,
+      "type": "timeline_snapshot"
+    },
+    {
+      "r": 28,
+      "c": 13,
+      "blockR": 2,
+      "blockC": 1,
+      "fromOwner": "neutral",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 11,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 9,
+      "c": 13,
+      "unitType": "elf",
+      "faction": "human",
+      "factionUnitCount": 2,
+      "factionUnitCap": 15,
+      "turn": 11,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 7,
+      "c": 42,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 5,
+      "factionUnitCap": 15,
+      "turn": 11,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 42,
+      "c": 7,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 4,
+      "factionUnitCap": 25,
+      "turn": 11,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 3,
+      "c": 7,
+      "unitType": "dwarf",
+      "faction": "human",
+      "factionUnitCount": 3,
+      "factionUnitCap": 15,
+      "turn": 12,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 7,
+      "c": 32,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 6,
+      "factionUnitCap": 15,
+      "turn": 12,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 19,
+      "c": 43,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 7,
+      "factionUnitCap": 15,
+      "turn": 13,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 4,
+      "c": 25,
+      "blockR": 0,
+      "blockC": 2,
+      "fromOwner": "neutral",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 15,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 11,
+      "c": 8,
+      "unitType": "human",
+      "faction": "human",
+      "factionUnitCount": 4,
+      "factionUnitCap": 15,
+      "turn": 15,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 41,
+      "c": 33,
+      "unitType": "ogre",
+      "faction": "ogre",
+      "factionUnitCount": 4,
+      "factionUnitCap": 15,
+      "turn": 15,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "blockR": 1,
+      "blockC": 1,
+      "fromOwner": "neutral",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "human",
+        "faction": "human"
+      },
+      "turn": 17,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 32,
+      "c": 11,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 5,
+      "factionUnitCap": 25,
+      "turn": 17,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 46,
+      "c": 17,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 6,
+      "factionUnitCap": 25,
+      "turn": 18,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 7,
+      "c": 42,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 8,
+      "factionUnitCap": 20,
+      "turn": 19,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 27,
+      "c": 4,
+      "blockR": 2,
+      "blockC": 0,
+      "fromOwner": "neutral",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 20,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 7,
+      "c": 32,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 9,
+      "factionUnitCap": 20,
+      "turn": 20,
+      "type": "unit_spawn"
+    },
+    {
+      "factionCrystals": {
+        "human": 4,
+        "goblin": 4,
+        "lizard": 6,
+        "ogre": 3,
+        "neutral": 8
+      },
+      "factionUnits": {
+        "human": 4,
+        "goblin": 9,
+        "lizard": 6,
+        "ogre": 4
+      },
+      "turn": 20,
+      "type": "timeline_snapshot"
+    },
+    {
+      "r": 19,
+      "c": 43,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 10,
+      "factionUnitCap": 20,
+      "turn": 21,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 25,
+      "c": 45,
+      "blockR": 2,
+      "blockC": 4,
+      "fromOwner": "neutral",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 22,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 4,
+      "c": 25,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 11,
+      "factionUnitCap": 25,
+      "turn": 22,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 32,
+      "c": 9,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 7,
+      "factionUnitCap": 30,
+      "turn": 22,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 44,
+      "c": 41,
+      "unitType": "ogre",
+      "faction": "ogre",
+      "factionUnitCount": 5,
+      "factionUnitCap": 15,
+      "turn": 22,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 18,
+      "c": 31,
+      "blockR": 1,
+      "blockC": 3,
+      "fromOwner": "neutral",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 23,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 28,
+      "c": 13,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 8,
+      "factionUnitCap": 30,
+      "turn": 23,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 9,
+      "c": 13,
+      "unitType": "elf",
+      "faction": "human",
+      "factionUnitCount": 5,
+      "factionUnitCap": 20,
+      "turn": 24,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 42,
+      "c": 7,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 9,
+      "factionUnitCap": 30,
+      "turn": 24,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 3,
+      "c": 7,
+      "unitType": "dwarf",
+      "faction": "human",
+      "factionUnitCount": 6,
+      "factionUnitCap": 20,
+      "turn": 25,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 33,
+      "c": 49,
+      "unitType": "ogre",
+      "faction": "ogre",
+      "factionUnitCount": 6,
+      "factionUnitCap": 15,
+      "turn": 25,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 7,
+      "c": 42,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 12,
+      "factionUnitCap": 30,
+      "turn": 27,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 7,
+      "c": 32,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 13,
+      "factionUnitCap": 30,
+      "turn": 28,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 11,
+      "c": 8,
+      "unitType": "human",
+      "faction": "human",
+      "factionUnitCount": 7,
+      "factionUnitCap": 20,
+      "turn": 28,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "unitType": "elf",
+      "faction": "human",
+      "factionUnitCount": 8,
+      "factionUnitCap": 20,
+      "turn": 29,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 19,
+      "c": 43,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 14,
+      "factionUnitCap": 30,
+      "turn": 29,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 25,
+      "c": 45,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 15,
+      "factionUnitCap": 30,
+      "turn": 29,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 27,
+      "c": 4,
+      "blockR": 2,
+      "blockC": 0,
+      "fromOwner": "lizard",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "player"
+      },
+      "turn": 29,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 27,
+      "c": 4,
+      "hpBefore": 40,
+      "hpAfter": 40,
+      "hpMax": 40,
+      "recValue": 5,
+      "turn": 29,
+      "type": "player_heal"
+    },
+    {
+      "r": 19,
+      "c": 28,
+      "blockR": 1,
+      "blockC": 2,
+      "fromOwner": "neutral",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 30,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 4,
+      "c": 25,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 16,
+      "factionUnitCap": 35,
+      "turn": 30,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 18,
+      "c": 31,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 17,
+      "factionUnitCap": 35,
+      "turn": 30,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 32,
+      "c": 11,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 10,
+      "factionUnitCap": 25,
+      "turn": 30,
+      "type": "unit_spawn"
+    },
+    {
+      "factionCrystals": {
+        "human": 5,
+        "goblin": 7,
+        "lizard": 5,
+        "ogre": 3,
+        "neutral": 5
+      },
+      "factionUnits": {
+        "human": 8,
+        "goblin": 17,
+        "lizard": 10,
+        "ogre": 6
+      },
+      "turn": 30,
+      "type": "timeline_snapshot"
+    },
+    {
+      "r": 27,
+      "c": 4,
+      "hpBefore": 40,
+      "hpAfter": 40,
+      "hpMax": 40,
+      "recValue": 5,
+      "turn": 30,
+      "type": "player_heal"
+    },
+    {
+      "r": 23,
+      "c": 38,
+      "blockR": 2,
+      "blockC": 3,
+      "fromOwner": "neutral",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 31,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 39,
+      "c": 36,
+      "blockR": 3,
+      "blockC": 3,
+      "fromOwner": "neutral",
+      "toOwner": "ogre",
+      "capturer": {
+        "kind": "unit",
+        "race": "ogre",
+        "faction": "ogre"
+      },
+      "turn": 31,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 46,
+      "c": 17,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 11,
+      "factionUnitCap": 25,
+      "turn": 31,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 27,
+      "c": 4,
+      "hpBefore": 40,
+      "hpAfter": 40,
+      "hpMax": 40,
+      "recValue": 5,
+      "turn": 31,
+      "type": "player_heal"
+    },
+    {
+      "r": 4,
+      "c": 25,
+      "blockR": 0,
+      "blockC": 2,
+      "fromOwner": "goblin",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "human",
+        "faction": "human"
+      },
+      "turn": 33,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 37,
+      "c": 23,
+      "blockR": 3,
+      "blockC": 2,
+      "fromOwner": "neutral",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 33,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 41,
+      "c": 33,
+      "unitType": "ogre",
+      "faction": "ogre",
+      "factionUnitCount": 7,
+      "factionUnitCap": 20,
+      "turn": 33,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 25,
+      "c": 45,
+      "attackerType": "ogre",
+      "defenderType": "goblin",
+      "attackerFaction": "ogre",
+      "defenderFaction": "goblin",
+      "compatMul": 1,
+      "finalDamage": 6,
+      "turn": 34,
+      "type": "ai_battle_kill"
+    },
+    {
+      "r": 25,
+      "c": 45,
+      "blockR": 2,
+      "blockC": 4,
+      "fromOwner": "goblin",
+      "toOwner": "ogre",
+      "capturer": {
+        "kind": "unit",
+        "race": "ogre",
+        "faction": "ogre"
+      },
+      "turn": 35,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 4,
+      "c": 25,
+      "blockR": 0,
+      "blockC": 2,
+      "fromOwner": "human",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 35,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 7,
+      "c": 42,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 17,
+      "factionUnitCap": 35,
+      "turn": 35,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 32,
+      "c": 9,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 12,
+      "factionUnitCap": 30,
+      "turn": 35,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 7,
+      "c": 32,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 18,
+      "factionUnitCap": 35,
+      "turn": 36,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 28,
+      "c": 13,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 13,
+      "factionUnitCap": 30,
+      "turn": 36,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 9,
+      "c": 13,
+      "unitType": "dwarf",
+      "faction": "human",
+      "factionUnitCount": 9,
+      "factionUnitCap": 25,
+      "turn": 37,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 19,
+      "c": 28,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 19,
+      "factionUnitCap": 35,
+      "turn": 37,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 19,
+      "c": 43,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 20,
+      "factionUnitCap": 35,
+      "turn": 37,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 42,
+      "c": 7,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 14,
+      "factionUnitCap": 30,
+      "turn": 37,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 3,
+      "c": 7,
+      "unitType": "human",
+      "faction": "human",
+      "factionUnitCount": 10,
+      "factionUnitCap": 25,
+      "turn": 38,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 18,
+      "c": 31,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 21,
+      "factionUnitCap": 35,
+      "turn": 38,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 23,
+      "c": 38,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 22,
+      "factionUnitCap": 35,
+      "turn": 38,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "blockR": 1,
+      "blockC": 1,
+      "fromOwner": "human",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 39,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 25,
+      "c": 45,
+      "blockR": 2,
+      "blockC": 4,
+      "fromOwner": "ogre",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 40,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 44,
+      "c": 41,
+      "unitType": "ogre",
+      "faction": "ogre",
+      "factionUnitCount": 8,
+      "factionUnitCap": 20,
+      "turn": 40,
+      "type": "unit_spawn"
+    },
+    {
+      "factionCrystals": {
+        "human": 4,
+        "goblin": 9,
+        "lizard": 6,
+        "ogre": 4,
+        "neutral": 2
+      },
+      "factionUnits": {
+        "human": 10,
+        "goblin": 22,
+        "lizard": 14,
+        "ogre": 8
+      },
+      "turn": 40,
+      "type": "timeline_snapshot"
+    },
+    {
+      "r": 25,
+      "c": 29,
+      "blockR": 2,
+      "blockC": 2,
+      "fromOwner": "neutral",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 41,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 11,
+      "c": 8,
+      "unitType": "elf",
+      "faction": "human",
+      "factionUnitCount": 11,
+      "factionUnitCap": 20,
+      "turn": 41,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 4,
+      "c": 25,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 23,
+      "factionUnitCap": 50,
+      "turn": 42,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 27,
+      "c": 4,
+      "unitType": "dwarf",
+      "faction": "human",
+      "factionUnitCount": 12,
+      "factionUnitCap": 20,
+      "turn": 42,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 28,
+      "c": 13,
+      "blockR": 2,
+      "blockC": 1,
+      "fromOwner": "lizard",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "player"
+      },
+      "turn": 42,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 7,
+      "c": 32,
+      "blockR": 0,
+      "blockC": 3,
+      "fromOwner": "goblin",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "human",
+        "faction": "human"
+      },
+      "turn": 43,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 7,
+      "c": 42,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 24,
+      "factionUnitCap": 45,
+      "turn": 43,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 32,
+      "c": 11,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 15,
+      "factionUnitCap": 25,
+      "turn": 43,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 33,
+      "c": 49,
+      "unitType": "ogre",
+      "faction": "ogre",
+      "factionUnitCount": 9,
+      "factionUnitCap": 20,
+      "turn": 43,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 46,
+      "c": 17,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 16,
+      "factionUnitCap": 25,
+      "turn": 44,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 19,
+      "c": 28,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 25,
+      "factionUnitCap": 45,
+      "turn": 45,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 19,
+      "c": 43,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 26,
+      "factionUnitCap": 45,
+      "turn": 45,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 37,
+      "c": 23,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 17,
+      "factionUnitCap": 25,
+      "turn": 45,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 27,
+      "factionUnitCap": 45,
+      "turn": 46,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 18,
+      "c": 31,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 28,
+      "factionUnitCap": 45,
+      "turn": 46,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 23,
+      "c": 38,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 29,
+      "factionUnitCap": 45,
+      "turn": 46,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 25,
+      "c": 45,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 30,
+      "factionUnitCap": 45,
+      "turn": 47,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 27,
+      "c": 4,
+      "blockR": 2,
+      "blockC": 0,
+      "fromOwner": "human",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 48,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 37,
+      "c": 23,
+      "blockR": 3,
+      "blockC": 2,
+      "fromOwner": "lizard",
+      "toOwner": "ogre",
+      "capturer": {
+        "kind": "unit",
+        "race": "ogre",
+        "faction": "ogre"
+      },
+      "turn": 48,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 25,
+      "c": 29,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 31,
+      "factionUnitCap": 45,
+      "turn": 48,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 32,
+      "c": 9,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 18,
+      "factionUnitCap": 25,
+      "turn": 48,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 39,
+      "c": 36,
+      "unitType": "ogre",
+      "faction": "ogre",
+      "factionUnitCount": 10,
+      "factionUnitCap": 25,
+      "turn": 48,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 49,
+      "c": 27,
+      "blockR": 4,
+      "blockC": 2,
+      "fromOwner": "neutral",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 49,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 9,
+      "c": 13,
+      "unitType": "human",
+      "faction": "human",
+      "factionUnitCount": 13,
+      "factionUnitCap": 25,
+      "turn": 50,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 4,
+      "c": 25,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 32,
+      "factionUnitCap": 45,
+      "turn": 50,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 42,
+      "c": 7,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 19,
+      "factionUnitCap": 30,
+      "turn": 50,
+      "type": "unit_spawn"
+    },
+    {
+      "factionCrystals": {
+        "human": 5,
+        "goblin": 9,
+        "lizard": 6,
+        "ogre": 5,
+        "neutral": 0
+      },
+      "factionUnits": {
+        "human": 13,
+        "goblin": 32,
+        "lizard": 19,
+        "ogre": 10
+      },
+      "turn": 50,
+      "type": "timeline_snapshot"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "attackerType": "lizard",
+      "defenderType": "elf",
+      "attackerFaction": "lizard",
+      "defenderFaction": "human",
+      "compatMul": 1,
+      "finalDamage": 7,
+      "turn": 51,
+      "type": "ai_battle_kill"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "attackerType": "lizard",
+      "defenderType": "goblin",
+      "attackerFaction": "lizard",
+      "defenderFaction": "goblin",
+      "compatMul": 0.7,
+      "finalDamage": 4.8999999999999995,
+      "turn": 51,
+      "type": "ai_battle_kill"
+    },
+    {
+      "r": 3,
+      "c": 7,
+      "unitType": "elf",
+      "faction": "human",
+      "factionUnitCount": 13,
+      "factionUnitCap": 25,
+      "turn": 51,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 7,
+      "c": 42,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 32,
+      "factionUnitCap": 45,
+      "turn": 51,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 41,
+      "c": 33,
+      "unitType": "ogre",
+      "faction": "ogre",
+      "factionUnitCount": 11,
+      "factionUnitCap": 25,
+      "turn": 51,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "blockR": 1,
+      "blockC": 1,
+      "fromOwner": "goblin",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 52,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 37,
+      "c": 23,
+      "blockR": 3,
+      "blockC": 2,
+      "fromOwner": "ogre",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 52,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 9,
+      "c": 13,
+      "blockR": 0,
+      "blockC": 1,
+      "fromOwner": "human",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 53,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 23,
+      "c": 38,
+      "blockR": 2,
+      "blockC": 3,
+      "fromOwner": "goblin",
+      "toOwner": "ogre",
+      "capturer": {
+        "kind": "unit",
+        "race": "ogre",
+        "faction": "ogre"
+      },
+      "turn": 53,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 19,
+      "c": 28,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 33,
+      "factionUnitCap": 40,
+      "turn": 53,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 19,
+      "c": 43,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 34,
+      "factionUnitCap": 40,
+      "turn": 53,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 7,
+      "c": 32,
+      "blockR": 0,
+      "blockC": 3,
+      "fromOwner": "human",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 54,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 11,
+      "c": 8,
+      "unitType": "dwarf",
+      "faction": "human",
+      "factionUnitCount": 14,
+      "factionUnitCap": 15,
+      "turn": 54,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 18,
+      "c": 31,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 35,
+      "factionUnitCap": 45,
+      "turn": 54,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 25,
+      "c": 29,
+      "blockR": 2,
+      "blockC": 2,
+      "fromOwner": "goblin",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 55,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 32,
+      "c": 11,
+      "blockR": 3,
+      "blockC": 1,
+      "fromOwner": "lizard",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "dwarf",
+        "faction": "human"
+      },
+      "turn": 55,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 25,
+      "c": 45,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 36,
+      "factionUnitCap": 40,
+      "turn": 55,
+      "type": "unit_spawn"
+    },
+    {
+      "enemyRace": "lizard",
+      "enemies": [
+        {
+          "type": "lizard",
+          "hp": 28,
+          "maxHp": 28,
+          "atk": 7
+        },
+        {
+          "type": "lizard",
+          "hp": 24,
+          "maxHp": 28,
+          "atk": 7
+        }
+      ],
+      "allies": [],
+      "playerHp": 40,
+      "playerStats": {
+        "hp": 40,
+        "atk": 7,
+        "rec": 5,
+        "agi": 10
+      },
+      "playerEquip": {
+        "weapon": null,
+        "armor": null,
+        "accessory": null
+      },
+      "turn": 55,
+      "type": "battle_start"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "blockR": 1,
+      "blockC": 1,
+      "fromOwner": "lizard",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "elf",
+        "faction": "human"
+      },
+      "turn": 56,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 33,
+      "c": 49,
+      "blockR": 3,
+      "blockC": 4,
+      "fromOwner": "ogre",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 56,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 9,
+      "c": 13,
+      "blockR": 0,
+      "blockC": 1,
+      "fromOwner": "goblin",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "dwarf",
+        "faction": "human"
+      },
+      "turn": 57,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 23,
+      "c": 38,
+      "blockR": 2,
+      "blockC": 3,
+      "fromOwner": "ogre",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 57,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 46,
+      "c": 17,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 20,
+      "factionUnitCap": 35,
+      "turn": 57,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 25,
+      "c": 29,
+      "blockR": 2,
+      "blockC": 2,
+      "fromOwner": "lizard",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 58,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 4,
+      "c": 25,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 37,
+      "factionUnitCap": 50,
+      "turn": 58,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 44,
+      "c": 41,
+      "unitType": "ogre",
+      "faction": "ogre",
+      "factionUnitCount": 12,
+      "factionUnitCap": 15,
+      "turn": 58,
+      "type": "unit_spawn"
+    },
+    {
+      "outcome": "lose",
+      "enemyRace": "lizard",
+      "turnsElapsed": 3,
+      "playerHpAfter": 0,
+      "goldGained": 0,
+      "killsByPlayer": 0,
+      "killsByAlly": 0,
+      "turn": 58,
+      "type": "battle_end"
+    },
+    {
+      "r": 23,
+      "c": 11,
+      "killerFaction": "lizard",
+      "goldLost": 0,
+      "lastStand": false,
+      "equipLost": null,
+      "turn": 58,
+      "type": "player_death"
+    },
+    {
+      "r": 23,
+      "c": 38,
+      "blockR": 2,
+      "blockC": 3,
+      "fromOwner": "goblin",
+      "toOwner": "ogre",
+      "capturer": {
+        "kind": "unit",
+        "race": "ogre",
+        "faction": "ogre"
+      },
+      "turn": 59,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "blockR": 1,
+      "blockC": 1,
+      "fromOwner": "human",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 59,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 7,
+      "c": 42,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 38,
+      "factionUnitCap": 50,
+      "turn": 59,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 27,
+      "c": 4,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 21,
+      "factionUnitCap": 30,
+      "turn": 60,
+      "type": "unit_spawn"
+    },
+    {
+      "factionCrystals": {
+        "human": 5,
+        "goblin": 10,
+        "lizard": 6,
+        "ogre": 4,
+        "neutral": 0
+      },
+      "factionUnits": {
+        "human": 14,
+        "goblin": 38,
+        "lizard": 21,
+        "ogre": 12
+      },
+      "turn": 60,
+      "type": "timeline_snapshot"
+    },
+    {
+      "r": 4,
+      "c": 25,
+      "blockR": 0,
+      "blockC": 2,
+      "fromOwner": "goblin",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "dwarf",
+        "faction": "human"
+      },
+      "turn": 61,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 7,
+      "c": 32,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 39,
+      "factionUnitCap": 45,
+      "turn": 61,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 19,
+      "c": 28,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 40,
+      "factionUnitCap": 45,
+      "turn": 61,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 19,
+      "c": 43,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 41,
+      "factionUnitCap": 45,
+      "turn": 61,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 32,
+      "c": 9,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 22,
+      "factionUnitCap": 30,
+      "turn": 61,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 49,
+      "c": 27,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 23,
+      "factionUnitCap": 30,
+      "turn": 61,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 28,
+      "c": 13,
+      "blockR": 2,
+      "blockC": 1,
+      "fromOwner": "human",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 62,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 18,
+      "c": 31,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 42,
+      "factionUnitCap": 45,
+      "turn": 62,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 25,
+      "c": 45,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 43,
+      "factionUnitCap": 45,
+      "turn": 63,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 33,
+      "c": 49,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 44,
+      "factionUnitCap": 45,
+      "turn": 63,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 42,
+      "c": 7,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 24,
+      "factionUnitCap": 35,
+      "turn": 63,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 4,
+      "c": 25,
+      "blockR": 0,
+      "blockC": 2,
+      "fromOwner": "human",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 64,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 3,
+      "c": 7,
+      "unitType": "human",
+      "faction": "human",
+      "factionUnitCount": 15,
+      "factionUnitCap": 20,
+      "turn": 64,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 37,
+      "c": 23,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 25,
+      "factionUnitCap": 35,
+      "turn": 64,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 25,
+      "c": 29,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 45,
+      "factionUnitCap": 50,
+      "turn": 65,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 46,
+      "factionUnitCap": 50,
+      "turn": 66,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 39,
+      "c": 36,
+      "unitType": "ogre",
+      "faction": "ogre",
+      "factionUnitCount": 13,
+      "factionUnitCap": 20,
+      "turn": 66,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 9,
+      "c": 13,
+      "blockR": 0,
+      "blockC": 1,
+      "fromOwner": "human",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 67,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 27,
+      "c": 4,
+      "blockR": 2,
+      "blockC": 0,
+      "fromOwner": "lizard",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "dwarf",
+        "faction": "human"
+      },
+      "turn": 67,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 7,
+      "c": 42,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 47,
+      "factionUnitCap": 55,
+      "turn": 67,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 11,
+      "c": 8,
+      "unitType": "elf",
+      "faction": "human",
+      "factionUnitCount": 16,
+      "factionUnitCap": 20,
+      "turn": 67,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 23,
+      "c": 38,
+      "blockR": 2,
+      "blockC": 3,
+      "fromOwner": "ogre",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 68,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 25,
+      "c": 29,
+      "blockR": 2,
+      "blockC": 2,
+      "fromOwner": "goblin",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 68,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 4,
+      "c": 25,
+      "blockR": 0,
+      "blockC": 2,
+      "fromOwner": "goblin",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "human",
+        "faction": "human"
+      },
+      "turn": 68,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 41,
+      "c": 33,
+      "blockR": 4,
+      "blockC": 3,
+      "fromOwner": "ogre",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 68,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 25,
+      "c": 45,
+      "blockR": 2,
+      "blockC": 4,
+      "fromOwner": "goblin",
+      "toOwner": "ogre",
+      "capturer": {
+        "kind": "unit",
+        "race": "ogre",
+        "faction": "ogre"
+      },
+      "turn": 69,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 3,
+      "c": 7,
+      "attackerType": "human",
+      "defenderType": "goblin",
+      "attackerFaction": "human",
+      "defenderFaction": "goblin",
+      "compatMul": 0.7,
+      "finalDamage": 3.5,
+      "turn": 70,
+      "type": "ai_battle_kill"
+    },
+    {
+      "r": 11,
+      "c": 8,
+      "blockR": 1,
+      "blockC": 0,
+      "fromOwner": "human",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 70,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 32,
+      "c": 11,
+      "blockR": 3,
+      "blockC": 1,
+      "fromOwner": "human",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 70,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 46,
+      "c": 17,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 26,
+      "factionUnitCap": 50,
+      "turn": 70,
+      "type": "unit_spawn"
+    },
+    {
+      "factionCrystals": {
+        "human": 3,
+        "goblin": 9,
+        "lizard": 10,
+        "ogre": 3,
+        "neutral": 0
+      },
+      "factionUnits": {
+        "human": 16,
+        "goblin": 46,
+        "lizard": 26,
+        "ogre": 13
+      },
+      "turn": 70,
+      "type": "timeline_snapshot"
+    },
+    {
+      "r": 27,
+      "c": 4,
+      "blockR": 2,
+      "blockC": 0,
+      "fromOwner": "human",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 71,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 4,
+      "c": 25,
+      "blockR": 0,
+      "blockC": 2,
+      "fromOwner": "human",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 72,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 22,
+      "c": 27,
+      "attackerType": "goblin",
+      "defenderType": "lizard",
+      "attackerFaction": "goblin",
+      "defenderFaction": "lizard",
+      "compatMul": 1,
+      "finalDamage": 5,
+      "turn": 73,
+      "type": "ai_battle_kill"
+    },
+    {
+      "r": 39,
+      "c": 36,
+      "blockR": 3,
+      "blockC": 3,
+      "fromOwner": "ogre",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 74,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 11,
+      "c": 8,
+      "blockR": 1,
+      "blockC": 0,
+      "fromOwner": "lizard",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "human",
+        "faction": "human"
+      },
+      "turn": 74,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 9,
+      "c": 13,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 47,
+      "factionUnitCap": 55,
+      "turn": 74,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 48,
+      "factionUnitCap": 55,
+      "turn": 74,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 28,
+      "c": 13,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 26,
+      "factionUnitCap": 50,
+      "turn": 74,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 32,
+      "c": 9,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 27,
+      "factionUnitCap": 50,
+      "turn": 74,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 49,
+      "c": 27,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 28,
+      "factionUnitCap": 50,
+      "turn": 74,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 25,
+      "c": 29,
+      "blockR": 2,
+      "blockC": 2,
+      "fromOwner": "lizard",
+      "toOwner": "ogre",
+      "capturer": {
+        "kind": "unit",
+        "race": "ogre",
+        "faction": "ogre"
+      },
+      "turn": 75,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 7,
+      "c": 42,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 49,
+      "factionUnitCap": 55,
+      "turn": 75,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 23,
+      "c": 38,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 50,
+      "factionUnitCap": 55,
+      "turn": 75,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 41,
+      "c": 33,
+      "blockR": 4,
+      "blockC": 3,
+      "fromOwner": "lizard",
+      "toOwner": "ogre",
+      "capturer": {
+        "kind": "unit",
+        "race": "ogre",
+        "faction": "ogre"
+      },
+      "turn": 76,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 42,
+      "c": 7,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 29,
+      "factionUnitCap": 40,
+      "turn": 76,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 44,
+      "c": 41,
+      "unitType": "ogre",
+      "faction": "ogre",
+      "factionUnitCount": 14,
+      "factionUnitCap": 20,
+      "turn": 76,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 9,
+      "c": 13,
+      "blockR": 0,
+      "blockC": 1,
+      "fromOwner": "goblin",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 77,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 37,
+      "c": 23,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 30,
+      "factionUnitCap": 45,
+      "turn": 77,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 9,
+      "c": 13,
+      "blockR": 0,
+      "blockC": 1,
+      "fromOwner": "lizard",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "dwarf",
+        "faction": "human"
+      },
+      "turn": 78,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 33,
+      "c": 49,
+      "blockR": 3,
+      "blockC": 4,
+      "fromOwner": "goblin",
+      "toOwner": "ogre",
+      "capturer": {
+        "kind": "unit",
+        "race": "ogre",
+        "faction": "ogre"
+      },
+      "turn": 78,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 9,
+      "c": 13,
+      "blockR": 0,
+      "blockC": 1,
+      "fromOwner": "human",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 79,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 28,
+      "c": 13,
+      "blockR": 2,
+      "blockC": 1,
+      "fromOwner": "lizard",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "dwarf",
+        "faction": "human"
+      },
+      "turn": 79,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 25,
+      "c": 29,
+      "blockR": 2,
+      "blockC": 2,
+      "fromOwner": "ogre",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 79,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 25,
+      "c": 45,
+      "blockR": 2,
+      "blockC": 4,
+      "fromOwner": "ogre",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 80,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 3,
+      "c": 7,
+      "blockR": 0,
+      "blockC": 0,
+      "fromOwner": "human",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 80,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 9,
+      "c": 13,
+      "blockR": 0,
+      "blockC": 1,
+      "fromOwner": "lizard",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "elf",
+        "faction": "human"
+      },
+      "turn": 80,
+      "type": "crystal_capture"
+    },
+    {
+      "factionCrystals": {
+        "human": 3,
+        "goblin": 12,
+        "lizard": 7,
+        "ogre": 3,
+        "neutral": 0
+      },
+      "factionUnits": {
+        "human": 16,
+        "goblin": 50,
+        "lizard": 30,
+        "ogre": 14
+      },
+      "turn": 80,
+      "type": "timeline_snapshot"
+    },
+    {
+      "r": 41,
+      "c": 33,
+      "blockR": 4,
+      "blockC": 3,
+      "fromOwner": "ogre",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 81,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 39,
+      "c": 36,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 51,
+      "factionUnitCap": 60,
+      "turn": 81,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 52,
+      "factionUnitCap": 60,
+      "turn": 82,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 32,
+      "c": 11,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 31,
+      "factionUnitCap": 40,
+      "turn": 82,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 7,
+      "c": 42,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 53,
+      "factionUnitCap": 60,
+      "turn": 83,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 27,
+      "c": 4,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 32,
+      "factionUnitCap": 40,
+      "turn": 83,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 23,
+      "c": 38,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 54,
+      "factionUnitCap": 60,
+      "turn": 83,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 46,
+      "c": 17,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 33,
+      "factionUnitCap": 40,
+      "turn": 83,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 33,
+      "c": 49,
+      "blockR": 3,
+      "blockC": 4,
+      "fromOwner": "ogre",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 84,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 39,
+      "c": 36,
+      "blockR": 3,
+      "blockC": 3,
+      "fromOwner": "goblin",
+      "toOwner": "ogre",
+      "capturer": {
+        "kind": "unit",
+        "race": "ogre",
+        "faction": "ogre"
+      },
+      "turn": 85,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 21,
+      "c": 26,
+      "attackerType": "goblin",
+      "defenderType": "dwarf",
+      "attackerFaction": "goblin",
+      "defenderFaction": "human",
+      "compatMul": 1,
+      "finalDamage": 5,
+      "turn": 85,
+      "type": "ai_battle_kill"
+    },
+    {
+      "r": 7,
+      "c": 32,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 55,
+      "factionUnitCap": 60,
+      "turn": 85,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 19,
+      "c": 28,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 56,
+      "factionUnitCap": 60,
+      "turn": 85,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 19,
+      "c": 43,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 57,
+      "factionUnitCap": 60,
+      "turn": 85,
+      "type": "unit_spawn"
+    },
+    {
+      "enemyRace": "goblin",
+      "enemies": [
+        {
+          "type": "goblin",
+          "hp": 19.1,
+          "maxHp": 28,
+          "atk": 5
+        }
+      ],
+      "allies": [],
+      "playerHp": 40,
+      "playerStats": {
+        "hp": 40,
+        "atk": 7,
+        "rec": 5,
+        "agi": 10
+      },
+      "playerEquip": {
+        "weapon": null,
+        "armor": null,
+        "accessory": null
+      },
+      "turn": 85,
+      "type": "battle_start"
+    },
+    {
+      "r": 9,
+      "c": 13,
+      "blockR": 0,
+      "blockC": 1,
+      "fromOwner": "human",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 86,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 18,
+      "c": 31,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 58,
+      "factionUnitCap": 65,
+      "turn": 86,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 25,
+      "c": 29,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 59,
+      "factionUnitCap": 65,
+      "turn": 86,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 3,
+      "c": 7,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 60,
+      "factionUnitCap": 65,
+      "turn": 87,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 4,
+      "c": 25,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 61,
+      "factionUnitCap": 65,
+      "turn": 87,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 25,
+      "c": 45,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 62,
+      "factionUnitCap": 65,
+      "turn": 87,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 32,
+      "c": 9,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 34,
+      "factionUnitCap": 40,
+      "turn": 87,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 49,
+      "c": 27,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 35,
+      "factionUnitCap": 40,
+      "turn": 87,
+      "type": "unit_spawn"
+    },
+    {
+      "attacker": {
+        "kind": "player"
+      },
+      "victim": {
+        "race": "goblin"
+      },
+      "compatMul": 1,
+      "equipBonusMul": 1,
+      "finalDamage": 7,
+      "goldDrop": 11,
+      "turn": 87,
+      "type": "battle_kill"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "blockR": 1,
+      "blockC": 1,
+      "fromOwner": "goblin",
+      "toOwner": "human",
+      "capturer": {
+        "kind": "unit",
+        "race": "human",
+        "faction": "human"
+      },
+      "turn": 88,
+      "type": "crystal_capture"
+    },
+    {
+      "outcome": "win",
+      "enemyRace": "goblin",
+      "turnsElapsed": 3,
+      "playerHpAfter": 30,
+      "goldGained": 11,
+      "killsByPlayer": 1,
+      "killsByAlly": 0,
+      "turn": 88,
+      "type": "battle_end"
+    },
+    {
+      "r": 10,
+      "c": 17,
+      "attackerType": "goblin",
+      "defenderType": "lizard",
+      "attackerFaction": "goblin",
+      "defenderFaction": "lizard",
+      "compatMul": 1,
+      "finalDamage": 5,
+      "turn": 89,
+      "type": "ai_battle_kill"
+    },
+    {
+      "r": 42,
+      "c": 7,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 35,
+      "factionUnitCap": 40,
+      "turn": 89,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 11,
+      "c": 8,
+      "blockR": 1,
+      "blockC": 0,
+      "fromOwner": "human",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 90,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 12,
+      "c": 17,
+      "blockR": 1,
+      "blockC": 1,
+      "fromOwner": "human",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 90,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 37,
+      "c": 23,
+      "unitType": "lizard",
+      "faction": "lizard",
+      "factionUnitCount": 36,
+      "factionUnitCap": 45,
+      "turn": 90,
+      "type": "unit_spawn"
+    },
+    {
+      "factionCrystals": {
+        "human": 1,
+        "goblin": 13,
+        "lizard": 9,
+        "ogre": 2,
+        "neutral": 0
+      },
+      "factionUnits": {
+        "human": 15,
+        "goblin": 61,
+        "lizard": 36,
+        "ogre": 14
+      },
+      "turn": 90,
+      "type": "timeline_snapshot"
+    },
+    {
+      "r": 7,
+      "c": 42,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 62,
+      "factionUnitCap": 65,
+      "turn": 91,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 23,
+      "c": 38,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 63,
+      "factionUnitCap": 65,
+      "turn": 91,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 33,
+      "c": 49,
+      "unitType": "goblin",
+      "faction": "goblin",
+      "factionUnitCount": 64,
+      "factionUnitCap": 65,
+      "turn": 91,
+      "type": "unit_spawn"
+    },
+    {
+      "r": 10,
+      "c": 17,
+      "attackerType": "human",
+      "defenderType": "goblin",
+      "attackerFaction": "human",
+      "defenderFaction": "goblin",
+      "compatMul": 0.7,
+      "finalDamage": 3.5,
+      "turn": 92,
+      "type": "ai_battle_kill"
+    },
+    {
+      "r": 37,
+      "c": 23,
+      "blockR": 3,
+      "blockC": 2,
+      "fromOwner": "lizard",
+      "toOwner": "goblin",
+      "capturer": {
+        "kind": "unit",
+        "race": "goblin",
+        "faction": "goblin"
+      },
+      "turn": 92,
+      "type": "crystal_capture"
+    },
+    {
+      "r": 28,
+      "c": 13,
+      "blockR": 2,
+      "blockC": 1,
+      "fromOwner": "human",
+      "toOwner": "lizard",
+      "capturer": {
+        "kind": "unit",
+        "race": "lizard",
+        "faction": "lizard"
+      },
+      "turn": 92,
+      "type": "crystal_capture"
+    }
+  ],
+  "summary": {
+    "finalCrystalsByFaction": {
+      "human": 0,
+      "goblin": 14,
+      "lizard": 9,
+      "ogre": 2,
+      "neutral": 0
+    },
+    "totalKills": {
+      "byFaction": {
+        "human": 2,
+        "goblin": 3,
+        "lizard": 2,
+        "ogre": 1,
+        "player": 1
+      },
+      "byRace": {
+        "ogre": 1,
+        "lizard": 2,
+        "human": 2,
+        "goblin": 3,
+        "player": 1
+      }
+    },
+    "killMatrix": {
+      "ogre→goblin": 1,
+      "lizard→elf": 1,
+      "lizard→goblin": 1,
+      "human→goblin": 2,
+      "goblin→lizard": 2,
+      "goblin→dwarf": 1,
+      "player→goblin": 1
+    },
+    "playerStats": {
+      "directKills": 1,
+      "directKillsByVictimRace": {
+        "goblin": 1
+      },
+      "totalKillsAll": 9,
+      "playerKillRatio": 0.1111111111111111,
+      "deaths": 1,
+      "goldEarned": 11,
+      "goldSpent": 0,
+      "goldFinal": 11,
+      "battlesWon": 1,
+      "battlesEscaped": 0,
+      "battlesLost": 1,
+      "crystalsCapturedByPlayer": 2,
+      "crystalsCapturedByHumanAI": 14,
+      "healUses": 3,
+      "healHpTotal": 0,
+      "shopOpens": 0,
+      "shopPurchases": 0,
+      "finalEquip": {
+        "weapon": null,
+        "armor": null,
+        "accessory": null
+      }
+    },
+    "factionTimeline": {
+      "crystals": {
+        "human": [
+          {
+            "turn": 10,
+            "n": 3
+          },
+          {
+            "turn": 20,
+            "n": 4
+          },
+          {
+            "turn": 30,
+            "n": 5
+          },
+          {
+            "turn": 40,
+            "n": 4
+          },
+          {
+            "turn": 50,
+            "n": 5
+          },
+          {
+            "turn": 60,
+            "n": 5
+          },
+          {
+            "turn": 70,
+            "n": 3
+          },
+          {
+            "turn": 80,
+            "n": 3
+          },
+          {
+            "turn": 90,
+            "n": 1
+          }
+        ],
+        "goblin": [
+          {
+            "turn": 10,
+            "n": 3
+          },
+          {
+            "turn": 20,
+            "n": 4
+          },
+          {
+            "turn": 30,
+            "n": 7
+          },
+          {
+            "turn": 40,
+            "n": 9
+          },
+          {
+            "turn": 50,
+            "n": 9
+          },
+          {
+            "turn": 60,
+            "n": 10
+          },
+          {
+            "turn": 70,
+            "n": 9
+          },
+          {
+            "turn": 80,
+            "n": 12
+          },
+          {
+            "turn": 90,
+            "n": 13
+          }
+        ],
+        "lizard": [
+          {
+            "turn": 10,
+            "n": 4
+          },
+          {
+            "turn": 20,
+            "n": 6
+          },
+          {
+            "turn": 30,
+            "n": 5
+          },
+          {
+            "turn": 40,
+            "n": 6
+          },
+          {
+            "turn": 50,
+            "n": 6
+          },
+          {
+            "turn": 60,
+            "n": 6
+          },
+          {
+            "turn": 70,
+            "n": 10
+          },
+          {
+            "turn": 80,
+            "n": 7
+          },
+          {
+            "turn": 90,
+            "n": 9
+          }
+        ],
+        "ogre": [
+          {
+            "turn": 10,
+            "n": 3
+          },
+          {
+            "turn": 20,
+            "n": 3
+          },
+          {
+            "turn": 30,
+            "n": 3
+          },
+          {
+            "turn": 40,
+            "n": 4
+          },
+          {
+            "turn": 50,
+            "n": 5
+          },
+          {
+            "turn": 60,
+            "n": 4
+          },
+          {
+            "turn": 70,
+            "n": 3
+          },
+          {
+            "turn": 80,
+            "n": 3
+          },
+          {
+            "turn": 90,
+            "n": 2
+          }
+        ],
+        "neutral": [
+          {
+            "turn": 10,
+            "n": 12
+          },
+          {
+            "turn": 20,
+            "n": 8
+          },
+          {
+            "turn": 30,
+            "n": 5
+          },
+          {
+            "turn": 40,
+            "n": 2
+          },
+          {
+            "turn": 50,
+            "n": 0
+          },
+          {
+            "turn": 60,
+            "n": 0
+          },
+          {
+            "turn": 70,
+            "n": 0
+          },
+          {
+            "turn": 80,
+            "n": 0
+          },
+          {
+            "turn": 90,
+            "n": 0
+          }
+        ]
+      },
+      "units": {
+        "human": [
+          {
+            "turn": 10,
+            "n": 1
+          },
+          {
+            "turn": 20,
+            "n": 4
+          },
+          {
+            "turn": 30,
+            "n": 8
+          },
+          {
+            "turn": 40,
+            "n": 10
+          },
+          {
+            "turn": 50,
+            "n": 13
+          },
+          {
+            "turn": 60,
+            "n": 14
+          },
+          {
+            "turn": 70,
+            "n": 16
+          },
+          {
+            "turn": 80,
+            "n": 16
+          },
+          {
+            "turn": 90,
+            "n": 15
+          }
+        ],
+        "goblin": [
+          {
+            "turn": 10,
+            "n": 4
+          },
+          {
+            "turn": 20,
+            "n": 9
+          },
+          {
+            "turn": 30,
+            "n": 17
+          },
+          {
+            "turn": 40,
+            "n": 22
+          },
+          {
+            "turn": 50,
+            "n": 32
+          },
+          {
+            "turn": 60,
+            "n": 38
+          },
+          {
+            "turn": 70,
+            "n": 46
+          },
+          {
+            "turn": 80,
+            "n": 50
+          },
+          {
+            "turn": 90,
+            "n": 61
+          }
+        ],
+        "lizard": [
+          {
+            "turn": 10,
+            "n": 3
+          },
+          {
+            "turn": 20,
+            "n": 6
+          },
+          {
+            "turn": 30,
+            "n": 10
+          },
+          {
+            "turn": 40,
+            "n": 14
+          },
+          {
+            "turn": 50,
+            "n": 19
+          },
+          {
+            "turn": 60,
+            "n": 21
+          },
+          {
+            "turn": 70,
+            "n": 26
+          },
+          {
+            "turn": 80,
+            "n": 30
+          },
+          {
+            "turn": 90,
+            "n": 36
+          }
+        ],
+        "ogre": [
+          {
+            "turn": 10,
+            "n": 3
+          },
+          {
+            "turn": 20,
+            "n": 4
+          },
+          {
+            "turn": 30,
+            "n": 6
+          },
+          {
+            "turn": 40,
+            "n": 8
+          },
+          {
+            "turn": 50,
+            "n": 10
+          },
+          {
+            "turn": 60,
+            "n": 12
+          },
+          {
+            "turn": 70,
+            "n": 13
+          },
+          {
+            "turn": 80,
+            "n": 14
+          },
+          {
+            "turn": 90,
+            "n": 14
+          }
+        ]
+      }
+    }
+  }
+}

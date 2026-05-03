@@ -11,7 +11,17 @@
       "Bash(node -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('C:/Users/shioa/Documents/1_ProgramFiles/3d_Dungeon/logs/dungeon_sim_100games_2026-04-18T12-18-57.json','utf8'\\)\\); console.log\\('top keys:', Object.keys\\(d\\)\\); console.log\\('games len:', d.games.length\\); console.log\\('game0 keys:', Object.keys\\(d.games[0]\\)\\); console.log\\('game0 winner:', d.games[0].winner\\); console.log\\('unitStats sample:', JSON.stringify\\(d.games[0].unitStats, null, 2\\).slice\\(0, 3000\\)\\); console.log\\('matchups sample:', JSON.stringify\\(d.games[0].matchups, null, 2\\).slice\\(0, 2000\\)\\);\")",
       "Bash(node -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('C:/Users/shioa/Documents/1_ProgramFiles/3d_Dungeon/logs/dungeon_sim_100games_2026-04-18T12-18-57.json','utf8'\\)\\); console.log\\('isArray:', Array.isArray\\(d\\)\\); console.log\\('len:', d.length\\); console.log\\('g0 keys:', Object.keys\\(d[0]\\)\\); console.log\\('g0 winner:', d[0].winner\\); console.log\\('g0 unitStats:', JSON.stringify\\(d[0].unitStats, null, 2\\).slice\\(0, 3000\\)\\);\")",
       "Bash(node -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('C:/Users/shioa/Documents/1_ProgramFiles/3d_Dungeon/logs/dungeon_sim_100games_2026-04-18T12-18-57.json','utf8'\\)\\); console.log\\('matchups:', JSON.stringify\\(d[0].matchups, null, 2\\).slice\\(0, 3000\\)\\); console.log\\('duration:', d[0].duration\\); console.log\\('spawnByFaction:', JSON.stringify\\(d[0].spawnByFaction, null, 2\\)\\);\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(xxd)",
+      "Bash(node analyze_iter1.js)",
+      "Bash(node analyze_iter2.js)",
+      "Bash(python3)",
+      "PowerShell(cd \"C:\\\\Users\\\\shioa\\\\Documents\\\\1_ProgramFiles\\\\3d_Dungeon\\\\logs\"; $files = @\\(\"gamelog_20260502_185400_GAMEOVER.json\", \"gamelog_20260502_190733_CLEAR.json\", \"gamelog_20260503_074905_GAMEOVER.json\", \"gamelog_20260503_080045_GAMEOVER.json\", \"gamelog_20260503_081250_CLEAR.json\"\\); foreach \\($fname in $files\\) { $content = Get-Content $fname | ConvertFrom-Json; Write-Host \"=== $fname ===\" -ForegroundColor Green; Write-Host \\(\"Result: \" + $content.result\\); Write-Host \\(\"Turns: \" + $content.totalTurns\\); $summary = $content.summary; Write-Host \\(\"Deaths: \" + $summary.playerStats.deaths\\); Write-Host \\(\"Battles Won/Escaped/Lost: \" + $summary.playerStats.battlesWon + \"/\" + $summary.playerStats.battlesEscaped + \"/\" + $summary.playerStats.battlesLost\\); })",
+      "Bash(sed -n '6,7p' gamelog_20260502_185400_GAMEOVER.json)",
+      "Bash(sed -n '26302,26370p' gamelog_20260502_185400_GAMEOVER.json)",
+      "Bash(sed -n '6,7p' gamelog_20260502_190733_CLEAR.json)",
+      "Bash(sed -n '26377,26445p' gamelog_20260502_190733_CLEAR.json)",
+      "Bash(node \"C:/Users/shioa/Documents/1_ProgramFiles/3d_Dungeon/tmp_analyze_iter3.js\")"
     ]
   }
 }

@@ -45,7 +45,25 @@ function startBattle(contactEnemy) {
     log:             [`⚔ ${FACTIONS[race].name}との戦闘開始！`],
     selectedTarget:  0,
     selectedCommand: 0,
+    // gamelog 集計用カウンタ
+    startTurn:       Game.state.worldTurn,
+    killsByPlayer:   0,
+    killsByAlly:     0,
+    goldGained:      0,
   };
+
+  GameLog.event('battle_start', {
+    enemyRace: race,
+    enemies:   enemies.map(e   => ({ type: e.type, hp: e.hp, maxHp: e.maxHp, atk: e.atk })),
+    allies:    allyUnits.map(a => ({ type: a.type, hp: a.hp, maxHp: a.maxHp, atk: a.atk })),
+    playerHp:    player.hp,
+    playerStats: playerStats(),
+    playerEquip: {
+      weapon:    player.equip.weapon?.name    ?? null,
+      armor:     player.equip.armor?.name     ?? null,
+      accessory: player.equip.accessory?.name ?? null,
+    },
+  });
 
   document.getElementById('battle-panel').hidden = false;
   renderBattle();
@@ -215,12 +233,22 @@ function battleAttack(targetIdx) {
 
   // プレイヤー攻撃
   const dmg = playerAtkVs(target.type);
+  const targetHpBefore = target.hp;
+  const wpn = player.equip.weapon;
+  const equipBonusMul  = wpn?.bonus?.[target.type] ?? 1.0;
   target.hp -= dmg;
   battleState.log.unshift(`プレイヤー → ${UNIT_NAMES[target.type]}に ${dmg} ダメージ`);
-  if (target.hp <= 0) {
+  if (targetHpBefore > 0 && target.hp <= 0) {
     const g = goldDrop();
     player.gold += g;
+    battleState.killsByPlayer++;
+    battleState.goldGained += g;
     battleState.log.unshift(`${UNIT_NAMES[target.type]} 撃破！ +${g} GOLD`);
+    GameLog.event('battle_kill', {
+      attacker: { kind: 'player' },
+      victim:   { race: target.type },
+      compatMul: 1.0, equipBonusMul, finalDamage: dmg, goldDrop: g,
+    });
   }
 
   // 味方NPC攻撃（各々が生存敵をランダム攻撃）
@@ -231,12 +259,20 @@ function battleAttack(targetIdx) {
     const t    = alive[Math.floor(Math.random() * alive.length)];
     const mult = getAffinityMult(a.type, t.type);
     const d    = Math.max(1, Math.floor(a.atk * mult));
+    const tHpBefore = t.hp;
     t.hp -= d;
     battleState.log.unshift(`${UNIT_NAMES[a.type]} → ${UNIT_NAMES[t.type]}に ${d} ダメージ`);
-    if (t.hp <= 0) {
+    if (tHpBefore > 0 && t.hp <= 0) {
       const g = goldDrop();
       player.gold += g;
+      battleState.killsByAlly++;
+      battleState.goldGained += g;
       battleState.log.unshift(`${UNIT_NAMES[t.type]} 撃破！ +${g} GOLD`);
+      GameLog.event('battle_kill', {
+        attacker: { kind: 'ally', race: a.type },
+        victim:   { race: t.type },
+        compatMul: mult, equipBonusMul: 1.0, finalDamage: d, goldDrop: g,
+      });
     }
   }
 
@@ -337,6 +373,20 @@ function endBattle(result) {
   Game.state.monsters = Game.state.monsters.filter(m => m.hp > 0);
 
   const killerRace = battleState.enemyRace;
+  const player     = Game.state.player;
+
+  GameLog.event('battle_end', {
+    outcome:        result === 'win'  ? 'win'
+                  : result === 'flee' ? 'escape'
+                  : 'lose',
+    enemyRace:      battleState.enemyRace,
+    turnsElapsed:   Game.state.worldTurn - battleState.startTurn,
+    playerHpAfter:  Math.max(0, Math.ceil(player.hp)),
+    goldGained:     battleState.goldGained,
+    killsByPlayer:  battleState.killsByPlayer,
+    killsByAlly:    battleState.killsByAlly,
+  });
+
   Game.state.battleState         = null;
   Game.flags.battleNeedsRerender = false;
   document.getElementById('battle-panel').hidden = true;
@@ -344,7 +394,7 @@ function endBattle(result) {
   updateOnCrystal();
 
   if (result === 'dead') {
-    logMessage('💀 死亡... ゴールド半減、拠点に転送', 'battle');
+    logMessage('💀 戦闘不能。復活まで10ターン...', 'battle');
     playerDeath(killerRace);
     checkWinLoss();
     return;
@@ -352,11 +402,16 @@ function endBattle(result) {
 
   if (result === 'win') {
     logMessage('⚔ 戦闘勝利！', 'battle');
-    const player = Game.state.player;
     const cr = Game.state.crystalAtCell[player.gridR][player.gridC];
     if (cr && cr.owner !== 'human') {
+      const prevOwner = cr.owner;
       cr.owner = 'human'; cr.spawnTimer = 0;
       cr.discovered = true;
+      GameLog.event('crystal_capture', {
+        r: cr.r, c: cr.c, blockR: cr.blockR, blockC: cr.blockC,
+        fromOwner: prevOwner, toOwner: 'human',
+        capturer: { kind: 'player' },
+      });
       logMessage(`💎 クリスタルを占領！`, 'occupy');
     }
   } else if (result === 'flee') {
@@ -372,18 +427,50 @@ function endBattle(result) {
 function playerDeath(killerRace) {
   const player = Game.state.player;
   const humanCrystals = Game.state.crystals.filter(c => c.owner === 'human');
+  const goldBefore = player.gold;
+  const deathR = player.gridR, deathC = player.gridC;
   if (humanCrystals.length === 1) {
     // 最後の1拠点 → 敵に陥落させて敗北判定に委ねる
-    humanCrystals[0].owner      = killerRace;
-    humanCrystals[0].spawnTimer = 0;
+    const lastCr = humanCrystals[0];
+    const prevOwner = lastCr.owner;
+    lastCr.owner      = killerRace;
+    lastCr.spawnTimer = 0;
+    GameLog.event('crystal_capture', {
+      r: lastCr.r, c: lastCr.c, blockR: lastCr.blockR, blockC: lastCr.blockC,
+      fromOwner: prevOwner, toOwner: killerRace,
+      capturer: { kind: 'unit', race: killerRace, faction: killerRace },
+    });
+    GameLog.event('player_death', {
+      r: deathR, c: deathC, killerFaction: killerRace, goldLost: 0,
+      lastStand: true,
+    });
     logMessage(`💥 最後の人間族クリスタルが${FACTIONS[killerRace].name}に陥落！`, 'occupy');
     return;
   }
   player.gold = Math.floor(player.gold / 2);
-  const { hp } = playerStats();
-  player.hp = hp;
-  spawnPlayerAtHome();
-  updateOnCrystal();
+
+  // 装備1個ランダムロスト（Iteration 1：死亡ペナルティ強化）
+  const equippedSlots = ['weapon', 'armor', 'accessory'].filter(s => player.equip[s]);
+  let lostEquip = null;
+  if (equippedSlots.length > 0) {
+    const slot = equippedSlots[Math.floor(Math.random() * equippedSlots.length)];
+    lostEquip = { slot, name: player.equip[slot].name };
+    player.equip[slot] = null;
+    logMessage(`💢 ${lostEquip.name} を失った！`, 'battle');
+  }
+
+  GameLog.event('player_death', {
+    r: deathR, c: deathC, killerFaction: killerRace,
+    goldLost: goldBefore - player.gold, lastStand: false,
+    equipLost: lostEquip,
+  });
+
+  // 復活待機を開始（IMPL_NOTES ## 14 方針②）
+  // - HP=0 のまま 10 ターン待機（毎秒1ターン進行）
+  // - main.js の gameLoop が countdown を進めて最後に spawnPlayerAtHome を呼ぶ
+  Game.state.respawnCountdown  = 10;
+  Game.state.respawnNextTickAt = performance.now() + 1000;
+  _updateRespawnUI();
 }
 
 // =====================
@@ -414,6 +501,7 @@ function showResult(kind, detail) {
   document.getElementById('result-detail').textContent = `${detail}（${Game.state.worldTurn} ターン）`;
   document.getElementById('result-screen').hidden = false;
   logMessage(kind === 'win' ? '🎉 VICTORY！' : '💀 DEFEAT...', 'system');
+  GameLog.end(kind === 'win' ? 'CLEAR' : 'GAMEOVER');
 }
 
 // =====================

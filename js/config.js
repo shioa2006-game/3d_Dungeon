@@ -126,8 +126,8 @@ const cellBlockIdx = (() => {
 // =====================
 // Crystal spawn intervals (turns)
 // =====================
-const HUMAN_SPAWN_COOLDOWN = 10;
-const AI_SPAWN             = { goblin: 11, lizard: 13, ogre: 18 };
+const HUMAN_SPAWN_COOLDOWN = 13;
+const AI_SPAWN             = { goblin: 8, lizard: 13, ogre: 18 };
 const UNIT_CAP_MAX         = 100;
 const UNIT_CAP_PER_CRYSTAL = 5;
 
@@ -140,7 +140,7 @@ const UNIT_DEFS = {
   dwarf:  { hp: 40, atk: 4, faction: 'human',  sizeScale: 0.85 },
   goblin: { hp: 28, atk: 5, faction: 'goblin', sizeScale: 0.65, aggroRange: 1 },
   lizard: { hp: 28, atk: 7, faction: 'lizard', sizeScale: 1.00, aggroRange: 2 },
-  ogre:   { hp: 52, atk: 6, faction: 'ogre',   sizeScale: 1.10, aggroRange: 3 },
+  ogre:   { hp: 44, atk: 6, faction: 'ogre',   sizeScale: 1.10, aggroRange: 3 },
 };
 
 const AI_UNIT          = { goblin: 'goblin', lizard: 'lizard', ogre: 'ogre' };
@@ -258,9 +258,9 @@ const SHOP_POOL = [
   { slot: 'weapon', name: '鉄の剣',             price: 30,  mod: { atk: 2 } },
   { slot: 'weapon', name: '鋼の剣',             price: 90,  mod: { atk: 4 } },
   { slot: 'weapon', name: 'ミスリル剣',         price: 200, mod: { atk: 7 } },
-  { slot: 'weapon', name: 'ゴブリン特攻の剣',   price: 70,  mod: { atk: 2 }, bonus: { goblin: 1.8 } },
-  { slot: 'weapon', name: 'リザード特攻の槍',   price: 70,  mod: { atk: 2 }, bonus: { lizard: 1.8 } },
-  { slot: 'weapon', name: 'オーガ特攻の大剣',   price: 70,  mod: { atk: 2 }, bonus: { ogre:   1.8 } },
+  { slot: 'weapon', name: 'ゴブリン特攻の剣',   price: 70,  mod: { atk: 3 }, bonus: { goblin: 2.0 } },
+  { slot: 'weapon', name: 'リザード特攻の槍',   price: 70,  mod: { atk: 3 }, bonus: { lizard: 2.0 } },
+  { slot: 'weapon', name: 'オーガ特攻の大剣',   price: 70,  mod: { atk: 3 }, bonus: { ogre:   2.0 } },
   { slot: 'armor',  name: '革の鎧',             price: 30,  mod: { hp: 8 } },
   { slot: 'armor',  name: '鎖帷子',             price: 80,  mod: { hp: 18 } },
   { slot: 'armor',  name: '板金鎧',             price: 180, mod: { hp: 35 } },

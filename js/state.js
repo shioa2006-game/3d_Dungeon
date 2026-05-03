@@ -124,6 +124,11 @@ const Game = {
     shopItems:       null,
     shopSelectedIdx: 0,
     onCrystal:       null,
+
+    // Respawn countdown（プレイヤー死亡 → 復活までの待機）
+    // 0 = 通常状態、>0 = 待機中（毎秒1減算しつつワールドターン進行）
+    respawnCountdown:  0,
+    respawnNextTickAt: 0,
   },
   flags: {
     monstersAnimating:   false,

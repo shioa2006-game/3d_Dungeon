@@ -226,32 +226,36 @@ function drawMinimap() {
   drawUnitsOnMinimap(mapX0, mapY0, viewLeft, viewTop, cellDraw, pcx, pcy);
 
   // プレイヤースプライト（○の置き換え）
+  // 死亡 → 復活待機中はプレイヤーをマップから消す（IMPL_NOTES ## 14）
+  const playerHidden = Game.state.respawnCountdown > 0;
   const px  = mapX0 + (pcx - viewLeft) * cellDraw;
   const py  = mapY0 + (pcy - viewTop)  * cellDraw;
   const pSz = cellDraw * 0.92;
-  drawSpriteAt('player', 1.0, px - pSz / 2, py - pSz / 2, pSz);
+  if (!playerHidden) drawSpriteAt('player', 1.0, px - pSz / 2, py - pSz / 2, pSz);
 
-  // 方向△（既存のまま維持）
-  const circR   = cellDraw * 0.28;
-  const triDist = circR + cellDraw * 0.28;
-  const triH    = cellDraw * 0.28;
-  const triW    = cellDraw * 0.22;
-  const triCx   = px + Math.cos(player.visualAngle) * triDist;
-  const triCy   = py + Math.sin(player.visualAngle) * triDist;
-  const perpA   = player.visualAngle + Math.PI / 2;
-  const tx  = triCx + Math.cos(player.visualAngle) * triH * 0.6;
-  const ty  = triCy + Math.sin(player.visualAngle) * triH * 0.6;
-  const bx1 = triCx - Math.cos(player.visualAngle) * triH * 0.4 + Math.cos(perpA) * triW;
-  const by1 = triCy - Math.sin(player.visualAngle) * triH * 0.4 + Math.sin(perpA) * triW;
-  const bx2 = triCx - Math.cos(player.visualAngle) * triH * 0.4 - Math.cos(perpA) * triW;
-  const by2 = triCy - Math.sin(player.visualAngle) * triH * 0.4 - Math.sin(perpA) * triW;
+  // 方向△（既存のまま維持。死亡待機中は非表示）
+  if (!playerHidden) {
+    const circR   = cellDraw * 0.28;
+    const triDist = circR + cellDraw * 0.28;
+    const triH    = cellDraw * 0.28;
+    const triW    = cellDraw * 0.22;
+    const triCx   = px + Math.cos(player.visualAngle) * triDist;
+    const triCy   = py + Math.sin(player.visualAngle) * triDist;
+    const perpA   = player.visualAngle + Math.PI / 2;
+    const tx  = triCx + Math.cos(player.visualAngle) * triH * 0.6;
+    const ty  = triCy + Math.sin(player.visualAngle) * triH * 0.6;
+    const bx1 = triCx - Math.cos(player.visualAngle) * triH * 0.4 + Math.cos(perpA) * triW;
+    const by1 = triCy - Math.sin(player.visualAngle) * triH * 0.4 + Math.sin(perpA) * triW;
+    const bx2 = triCx - Math.cos(player.visualAngle) * triH * 0.4 - Math.cos(perpA) * triW;
+    const by2 = triCy - Math.sin(player.visualAngle) * triH * 0.4 - Math.sin(perpA) * triW;
 
-  ctx.beginPath();
-  ctx.moveTo(tx, ty); ctx.lineTo(bx1, by1); ctx.lineTo(bx2, by2);
-  ctx.closePath();
-  ctx.fillStyle = 'rgb(0,110,170)'; ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-  ctx.lineWidth = 2; ctx.lineJoin = 'round';
-  ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(tx, ty); ctx.lineTo(bx1, by1); ctx.lineTo(bx2, by2);
+    ctx.closePath();
+    ctx.fillStyle = 'rgb(0,110,170)'; ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = 2; ctx.lineJoin = 'round';
+    ctx.fill(); ctx.stroke();
+  }
 
   ctx.restore();
   strokeRect(R.x, R.y, R.w, R.h, 80, 80, 80, 2);
@@ -435,26 +439,28 @@ function drawFullMap() {
     c.stroke();
   }
 
-  // プレイヤー: 方向線 → 白丸
-  const player = Game.state.player;
-  const psx = mapX0 + (player.pos.x / CELL_SIZE) * cellDraw;
-  const psy = mapY0 + (player.pos.y / CELL_SIZE) * cellDraw;
-  c.beginPath();
-  c.moveTo(psx, psy);
-  c.lineTo(
-    psx + Math.cos(player.visualAngle) * cellDraw * 1.5,
-    psy + Math.sin(player.visualAngle) * cellDraw * 1.5
-  );
-  c.strokeStyle = '#66bbff';
-  c.lineWidth   = 2;
-  c.stroke();
-  c.beginPath();
-  c.arc(psx, psy, 5.5, 0, Math.PI * 2);
-  c.fillStyle   = '#ffffff';
-  c.fill();
-  c.strokeStyle = '#0066aa';
-  c.lineWidth   = 2;
-  c.stroke();
+  // プレイヤー: 方向線 → 白丸（死亡待機中は非表示）
+  if (Game.state.respawnCountdown === 0) {
+    const player = Game.state.player;
+    const psx = mapX0 + (player.pos.x / CELL_SIZE) * cellDraw;
+    const psy = mapY0 + (player.pos.y / CELL_SIZE) * cellDraw;
+    c.beginPath();
+    c.moveTo(psx, psy);
+    c.lineTo(
+      psx + Math.cos(player.visualAngle) * cellDraw * 1.5,
+      psy + Math.sin(player.visualAngle) * cellDraw * 1.5
+    );
+    c.strokeStyle = '#66bbff';
+    c.lineWidth   = 2;
+    c.stroke();
+    c.beginPath();
+    c.arc(psx, psy, 5.5, 0, Math.PI * 2);
+    c.fillStyle   = '#ffffff';
+    c.fill();
+    c.strokeStyle = '#0066aa';
+    c.lineWidth   = 2;
+    c.stroke();
+  }
 
   // ヒントテキスト
   c.fillStyle     = 'rgba(255,255,255,0.8)';

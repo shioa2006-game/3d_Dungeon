@@ -70,24 +70,27 @@ function playerAtkVs(raceOrType) {
   return atk;
 }
 
+// 復活先：本拠地クリスタル → 陥落していれば本拠地から最も近い人間族クリスタル
 function spawnPlayerAtHome() {
   const player = Game.state.player;
-  let best = null, bestDist = Infinity;
-  // 有効な人間族クリスタルのみ復活先候補とする
-  for (const cr of Game.state.crystals) {
-    if (cr.owner !== 'human' || !cr.valid) continue;
-    const d = Math.abs(cr.r - player.gridR) + Math.abs(cr.c - player.gridC);
-    if (d < bestDist) { bestDist = d; best = cr; }
-  }
-  // フォールバック：有効クリスタルがゼロの場合は所有クリスタル全体から探す
-  if (!best) {
+  // 本拠地クリスタル＝ブロック (0, 0)（左上）
+  const homeCr = Game.state.crystalByBlock[0][0];
+
+  let target;
+  if (homeCr && homeCr.owner === 'human') {
+    target = homeCr;
+  } else {
+    const baseR = homeCr?.r ?? 1;
+    const baseC = homeCr?.c ?? 1;
+    let best = null, bestDist = Infinity;
     for (const cr of Game.state.crystals) {
       if (cr.owner !== 'human') continue;
-      const d = Math.abs(cr.r - player.gridR) + Math.abs(cr.c - player.gridC);
+      const d = Math.abs(cr.r - baseR) + Math.abs(cr.c - baseC);
       if (d < bestDist) { bestDist = d; best = cr; }
     }
+    target = best ?? { r: 1, c: 1 };
   }
-  const target = best ?? { r: 1, c: 1 };
+
   player.gridR = target.r;
   player.gridC = target.c;
   player.pos   = new Vec2((target.c + 0.5) * CELL_SIZE, (target.r + 0.5) * CELL_SIZE);
@@ -101,11 +104,17 @@ function checkCrystalClaim() {
   const player = Game.state.player;
   const cr = Game.state.crystalAtCell[player.gridR][player.gridC];
   if (!cr || cr.owner === 'human') return;
+  const prevOwner = cr.owner;
   cr.owner      = 'human';
   cr.spawnTimer = 0;
   cr.discovered = true;
   updateCrystalConnectivity();   // 連結判定を再計算
   updateOnCrystal();
+  GameLog.event('crystal_capture', {
+    r: cr.r, c: cr.c, blockR: cr.blockR, blockC: cr.blockC,
+    fromOwner: prevOwner, toOwner: 'human',
+    capturer: { kind: 'player' },
+  });
   logMessage(`💎 クリスタルを人間族に転換！`, 'occupy');
   checkWinLoss();
 }

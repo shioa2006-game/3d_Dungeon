@@ -125,6 +125,11 @@ function trySpawnFromCrystal(cr) {
 
   Game.state.monsters.push(makeUnit(type, cr.r, cr.c));
   if (cr.owner === 'human') Game.state.humanAutoSpawnIndex++;
+
+  GameLog.event('unit_spawn', {
+    r: cr.r, c: cr.c, unitType: type, faction: cr.owner,
+    factionUnitCount: current + 1, factionUnitCap: cap,
+  });
 }
 
 function updateCrystals() {

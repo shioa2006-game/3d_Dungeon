@@ -1122,9 +1122,283 @@ player.visualAngle += diff * ROT_SPRING_K;  // 例: ROT_SPRING_K = 0.25
 
 ---
 
-## 13. ダンジョン生成アルゴリズム
+## 13. ゲームプレイログ機能（バランス調整用 / `gamelog v1`）
 
-**ラベル：[Phase10後]** | 議論日：2026-04-20 | 起点：Phase 4実装時
+**ラベル：[完了]** | 議論日：2026-05-02 | 実装完了：2026-05-02 | 起点：プレイヤー含む人間族が他種族に対して強すぎるためバランス調整を行うにあたり、原因を客観的に特定する材料を取得する目的
+
+### 背景・目的
+
+現状、プレイヤー操作を含めた人間族（human / elf / dwarf）がほぼ負けることがなく、ゲームバランスが崩れている。調整に着手するにあたり、以下を客観的に切り分けるためのログ機能を追加する。
+
+- **A. プレイヤー本人の貢献**（プレイヤー操作によって人間族が勝っているのか）
+- **B. 人間族AIの貢献**（人間族AIが単独で他種族AIに勝ち上がっているのか）
+- **C. マクロな勢力推移**（クリスタル数・ユニット数の時系列）
+- **D. セッションサマリ**（最終結果・所要ターン・kill 行列など）
+
+これらが取れれば、「ユニットステータス（HP/ATK）」「スポーン間隔」「相性補正 ×0.7」「装備特攻 ×1.8」「プレイヤー初期パラメータ」のどれを調整すべきか、または機能修正が必要かを判断できる。
+
+### 仕様
+
+#### 出力
+
+- **形式**：JSON（1ゲーム = 1ファイル）
+- **ファイル名**：`gamelog_YYYYMMDD_HHMMSS_<result>.json`（例：`gamelog_20260502_153012_CLEAR.json`）
+- **タイミング**：ゲーム終了時（CLEAR / GAMEOVER 確定時）に**自動でブラウザダウンロード**を発火
+- **保存先**：ブラウザの既定ダウンロードフォルダ → ユーザーが手動で `logs/` へ移動
+- **既存メッセージログ（`Game.state.messageLog`）とは独立**した分析専用ログとして実装する
+
+#### モジュール構成（実装時の指針）
+
+- 新規ファイル `js/gamelog.js` を追加し、グローバル `GameLog` オブジェクトを公開する
+- API 案：
+  - `GameLog.start()` — 新規ゲーム開始時に呼ぶ。セッション初期化＋`session_start` イベント記録。
+  - `GameLog.event(type, payload)` — 各イベント記録ポイントから呼ぶ。
+  - `GameLog.snapshot()` — `factionTimeline` 用のサンプリング(10ターン毎に呼ぶ)。
+  - `GameLog.end(result)` — 終了時に呼ぶ。サマリ計算 → JSON 化 → ダウンロード発火。
+- 各記録ポイント（占領・スポーン・戦闘・装備購入など）に `GameLog.event(...)` 呼び出しを差し込む
+
+#### ファイル構造（トップレベル）
+
+```jsonc
+{
+  "schemaVersion": 1,
+  "sessionId": "uuid",
+  "startedAt": "ISO8601",
+  "endedAt":   "ISO8601",
+  "result":    "CLEAR" | "GAMEOVER",
+  "totalTurns": 1234,
+  "config": {
+    "gridSize": 51,
+    "unitStats":          { "human": {hp,atk}, ... },
+    "spawnIntervals":     { "human":10, ... },
+    "compatibilityTable": [...],
+    "playerInitial":      { "hp":40, "atk":7, "rec":5, "agi":10 }
+  },
+  "summary": { /* 後述 */ },
+  "events":  [ /* 後述 */ ]
+}
+```
+
+#### 集計済みサマリ（`summary`）
+
+- `finalCrystalsByFaction`：終了時の各陣営クリスタル数
+- `totalKills`：陣営別／種族別 kill 総数
+- `killMatrix`：6×6 種族間 kill 行列（例：`"human→goblin": 12`）
+- `playerStats`
+  - `directKills`（プレイヤーがトドメを刺した数）
+  - `directKillsByVictimRace`
+  - `totalKillsAll`
+  - `playerKillRatio = directKills / totalKillsAll` ← **プレイヤー貢献度の核**
+  - `deaths`, `goldEarned`, `goldSpent`
+  - `battlesWon`, `battlesEscaped`, `battlesLost`
+  - `crystalsCapturedByPlayer`, `crystalsCapturedByHumanAI`
+  - `finalEquip`
+- `factionTimeline`：10ターン毎にサンプリングした各陣営のクリスタル数・ユニット数（events から再構築可能だが利便性のため同梱）
+
+#### イベント種別（`events[]`）
+
+すべてイベント駆動。すべてのイベントに `turn` フィールドを持つ。
+
+| type | 主要フィールド | 量・備考 |
+|---|---|---|
+| `session_start` | 初期クリスタル配置・初期プレイヤー状態 | 1件 |
+| `crystal_capture` | r, c, blockR, blockC, fromOwner, toOwner, capturer:{kind:"player"\|"unit", race?, faction?} | 占領のたび |
+| `unit_spawn` | r, c, type, faction, factionUnitCount, factionUnitCap | スポーンのたび |
+| `ai_battle_kill` | r, c, attackerType, defenderType, attackerFaction, defenderFaction, finalDamage, compatMul | **kill が発生したケースのみ記録**（軽量化） |
+| `battle_start` | enemyRace, enemies[], allies[], playerHp, playerEquip | プレイヤー戦闘の入口 |
+| `battle_kill` | attacker:{kind:"player"\|"ally", race}, victim:{race}, compatMul, equipBonusMul | プレイヤー戦闘内の kill のみ記録（**1攻撃ごとは記録しない**＝軽量化）|
+| `battle_end` | outcome:"win"\|"escape"\|"lose", turnsElapsed, playerHpAfter, goldGained, killsByPlayer, killsByAlly | プレイヤー戦闘終了時 |
+| `player_death` | r, c, killerType, killerFaction, goldLost | プレイヤー死亡時 |
+| `player_heal` | r, c, hpBefore, hpAfter | Q キーで回復したとき |
+| `shop_open` | lineup:[{slot,name,price}] | E キーでショップを開いたとき |
+| `shop_purchase` | item, price, soldBack:{item,price}, goldAfter | 購入のたび |
+| `timeline_snapshot` | factionCrystals:{...}, factionUnits:{...} | **10ターン毎**にサンプリング |
+
+#### 軽量化の方針（決定事項）
+
+- **AI 同士のバトル**：kill 発生時のみ記録（被弾だけのケースは省略）
+- **プレイヤー戦闘の1攻撃ごとのログ**は取らず、**kill 発生時のみ** `battle_kill` として記録
+- **`player_move` は記録しない**（移動は膨大かつ分析価値が低い）
+- **迷路シードは記録しない**（再現性は今回スコープ外）
+
+### 期待される分析の出口
+
+ログから以下の指標を事後集計で算出し、調整方針を決める：
+
+1. **プレイヤー貢献度**：`playerKillRatio` と `crystalsCapturedByPlayer / 人間族占領総数` から、プレイヤーを抜いた場合の人間族の強さを推定
+2. **AI戦の種族別勝率行列**（`killMatrix`）：相性補正 ×0.7 が想定通りに機能しているか
+3. **スポーン圧**：陣営ごとのスポーン累計と上限到達タイミング（`unit_spawn` イベント集計）
+4. **戦闘所要ターン分布**：`battle_end.turnsElapsed` 中央値 → プレイヤーが瞬殺できているかで装備強度を判定
+5. **特攻武器の寄与**：`battle_kill.equipBonusMul=1.8` の発動率と kill 寄与
+6. **クリスタル支配時間**：`crystal_capture` から各陣営の累積支配ターンを再構築
+
+### 想定される調整候補（ログ分析後）
+
+- ユニットステータス調整（人間族3種の HP/ATK、特に dwarf の HP=40 やオーガ HP=52 のバランス）
+- スポーン間隔調整（人間族 10 ターンが他陣営より過剰でないか）
+- 相性補正値（×0.7 / ×1.0 のメリハリ）
+- 装備特攻倍率（×1.8 が強すぎないか）
+- プレイヤー初期パラメータ（HP=40, ATK=7, REC=5, AGI=10）
+- 機能修正：味方参戦数上限（現状4体）、戦闘中の世界時間進行ペース、回復の制約付与など
+
+### 実装順（実施済み）
+
+1. `js/gamelog.js` 新規作成（モジュール骨格・API・JSON生成・ダウンロード処理）
+2. `js/main.js` の `newMaze()` で `GameLog.start()` を呼ぶ
+3. 各イベント発生箇所に `GameLog.event(...)` を差し込む
+   - 占領：`crystals.js`
+   - スポーン：`crystals.js` or `monsters.js`
+   - AI戦闘kill：`monsters.js` / `battle.js`（バトル外戦闘）
+   - プレイヤー戦闘：`battle.js`
+   - プレイヤー死亡・回復・ショップ：`player.js` / `shop.js`
+4. ターン進行ロジックに10ターン毎の `GameLog.snapshot()` 呼び出しを追加
+5. ゲーム終了判定箇所で `GameLog.end(result)` を呼ぶ
+6. 動作確認：1ゲームプレイして `logs/` 配下に妥当な JSON が出力されることを確認
+
+> 実プレイによるバランス調整サイクルは [BALANCE_TUNING_LOG.md](BALANCE_TUNING_LOG.md) を参照。
+
+---
+
+## 14. 死亡スパイラル問題
+
+**ラベル：[実装予定]** | 議論日：2026-05-03 | 起点：Iter 3 ログ分析（[BALANCE_TUNING_LOG.md](BALANCE_TUNING_LOG.md)）にて、装備喪失後に丸腰のまま連続死するパターンが死亡件数の46%を占めていたことを確認
+
+### 背景・現象
+
+死亡時に装備をランダム1個ロストする仕様（Iter 1 で導入）の副作用として、
+装備をすべて失ったプレイヤーがリスポーン地点付近の敵に絡まれ、丸腰のまま
+連続して死亡する「死亡スパイラル」が発生している。
+
+#### Iter 3 で観測された典型ケース
+
+- **ゲーム4 (GAMEOVER)**: ターン 705 で最後の装備（リザード特攻の槍）を喪失 → ターン 727〜791 の間に**丸腰のまま 12 連続死**（全てリザード）
+- **ゲーム1 (GAMEOVER)**: オーガに 9 連続死亡（402〜626 ターン）
+- **ゲーム3 (GAMEOVER)**: 終盤オーガに 7 連続死亡（617〜749 ターン）
+
+総死亡 56 回中 26 回（**46%**）が「装備3スロット全空（丸腰）」状態での死亡。
+一度装備を失うと、リスポーン地点に居座る敵から逃れられず、ATK 7・HP 40 の
+丸腰プレイヤーでは挽回できない。
+
+### 課題
+
+- ゴールドが残っていてもショップに辿り着けず装備を再購入できない
+- 拠点付近に強い敵（オーガ等）が居座ると即死ループに陥る
+- ゲームバランス調整（モンスター HP/ATK 調整）では解消できない構造的問題
+- 「死亡ペナルティ強化でプレイヤーを慎重にさせる」という Iter 1 の設計意図を超えて、ゲーム継続そのものを阻害している
+
+#### 現行のリスポーン仕様の問題
+
+現行の [`spawnPlayerAtHome()`](js/player.js#L73) は「死亡地点から最も近い人間族クリスタル」に復活するロジックのため、
+敵に囲まれた地点で死亡 → 同じ敵に近接するクリスタルに復活 → 即再戦闘 → 再死亡 のループが起きる。
+
+### 実装方針
+
+#### 方針① リスポーン位置の固定化（本拠地優先）
+
+**「死亡地点から最も近いクリスタル」 ではなく、「本拠地クリスタル → 本拠地から最も近い人間族クリスタル」 の順で復活先を決定する。**
+
+復活ロジック（[`spawnPlayerAtHome()`](js/player.js#L73)）を以下に変更：
+
+1. **本拠地クリスタル**＝ブロック (0, 0)（左上）に配置されたクリスタルを取得（`Game.state.crystalByBlock[0][0]`）
+2. 本拠地が人間族保有 → そこに復活
+3. 本拠地が他陣営に陥落 → 本拠地座標から**マンハッタン距離が最短**の人間族クリスタルに復活
+4. 人間族クリスタルが1つもない場合は既存の `checkWinLoss()` で GAMEOVER
+
+**Why:** 死亡地点近接の復活ループを断ち切り、地理的に距離を取って再出撃させる。
+**How to apply:** ゲーム開始位置（セル `(1,1)` → 本拠地クリスタル）と一致するため、プレイヤーの戦況把握が常に「本拠地起点」で予測可能になる。
+
+#### 方針② 復活待機ターン（10 ターン消費）
+
+**死亡してから即復活せず、ワールドが10ターン進むのを待つ。** その間に敵が残りクリスタルを奪取して GAMEOVER 条件（人間族クリスタル0）が成立すれば、復活を打ち切って GAMEOVER。
+
+##### 状態遷移
+
+```
+プレイヤー HP=0
+  ↓
+playerDeath() — 既存ペナルティ（ゴールド半減・装備ロスト）はそのまま発生
+  ↓
+復活待機状態へ突入：Game.state.respawnCountdown = 10
+  ↓
+1秒ごとに以下を繰り返し：
+  - triggerMonsterTurn() / updateCrystals() を実行（ワールドターン進行）
+  - respawnCountdown を 1 減算
+  - checkWinLoss() で GAMEOVER 判定 → 該当なら即終了（カウント打ち切り）
+  ↓
+カウント0 → spawnPlayerAtHome()（方針① のロジック）で復活
+  ↓
+入力ロック解除
+```
+
+##### パラメータ（決定事項）
+
+| 項目 | 値 | 備考 |
+|---|---|---|
+| 待機ターン数 | **10** | 仮設定。Iter 4 以降のバランス調整で変動の可能性あり |
+| 1ターンあたり実時間 | **1 秒** | 10 秒で復活 |
+| 早送り機能 | **なし** | プレイヤーは時間経過を待つしかない（ペナルティの一部） |
+| 死亡中の入力 | **基本的にロック**（移動・戦闘・ショップ・回復は全て無効） |
+| 例外：M キー | **有効**（全体マップ表示で戦況を確認可能） | 既存 `toggleFullMap()` をそのまま許容 |
+| 死亡中に GAMEOVER 条件成立 | **即カウント打ち切り → GAMEOVER 表示** | `checkWinLoss()` を毎ターン呼ぶ |
+
+##### UI 仕様
+
+- 3D ビュー上に半透明オーバーレイ（暗転）
+- 中央に大きく「**復活まで N**」を表示（毎ターン更新）
+- ミニマップは通常通り表示し、戦況の悪化が視覚的に伝わるようにする
+- M キーで全体マップを開けば、敵勢力がどこまで侵攻したかを確認できる
+
+##### 既存ペナルティとの関係
+
+- **ゴールド半減**：維持（既存仕様）
+- **装備ロスト**：維持（Iter 1 で導入）
+- **復活待機 10 ターン**：新規追加
+
+3つを併存させる。「世界が10ターン進む間、プレイヤーは戦線に居ない」という時間的損失そのものが新たなペナルティになる。
+
+### 実装影響範囲
+
+| ファイル | 変更内容 |
+|---|---|
+| [`js/player.js`](js/player.js) | `spawnPlayerAtHome()` を本拠地優先ロジックに書き換え |
+| [`js/battle.js`](js/battle.js) | `playerDeath()` 末尾で `spawnPlayerAtHome()` を直接呼ばず、`Game.state.respawnCountdown = 10` を設定 |
+| [`js/main.js`](js/main.js) | アニメーションループに「復活待機の進行（1秒1ターン）」処理を追加。`Game.state.respawnCountdown` をフラグに `triggerMonsterTurn()` / `updateCrystals()` / `checkWinLoss()` を呼ぶ |
+| `Game.state` | `respawnCountdown`（数値、0 なら通常状態）を追加 |
+| `Game.flags` | 入力ロック判定に使う。既存の `gameEnded` / `monstersAnimating` と並列で扱う |
+| `index.html` + CSS | 復活オーバーレイ用 DOM とスタイル追加 |
+| 入力ハンドラ | 死亡中は M キーのみ通す。それ以外の操作は無効 |
+
+### 期待効果
+
+- 死亡地点近接の即死ループが断たれる（方針①）
+- 詰み状態は10ターンの間に敵が残りクリスタルを奪い、自然に GAMEOVER（方針②）
+- 「丸腰連続12回死」のような長時間の不愉快なプレイ時間が圧縮される
+- 死亡コストが「ゴールド・装備・時間」の3軸で表現され、「死を恐れる」設計意図が強化される
+
+### 検証
+
+実装後、5戦して [`BALANCE_TUNING_LOG.md`](BALANCE_TUNING_LOG.md) Iter 4 として記録する。
+特に以下を確認：
+
+- 丸腰死亡件数が減少しているか（46% → 目標 20% 以下）
+- 平均死亡数が減少しているか（11.2 → 目標 6 以下）
+- 「復活待機 → 即 GAMEOVER」のシナリオが意図通り発生しているか
+- プレイ感（10秒待ちが許容範囲か、UI が分かりやすいか）
+
+### 検討して却下した代替案（参考）
+
+| 案 | 内容 | 却下理由 |
+|---|---|---|
+| A. 最弱装備の無料支給 | 死亡時に鉄の剣等を支給 | 「敵に囲まれた状態」では装備があっても挽回困難 |
+| B. リスポーン直後の数ターン無敵 | 復活直後数ターン戦闘不可 | 一時しのぎで本質的な詰み構造は変わらない |
+| C. 装備ロスト発動条件の緩和 | 残装備1個なら発動しない等 | 死亡ペナルティ自体は維持したいので不採用 |
+| D. 挽回不能の数値的判定 | 敵ユニット飽和＋人間族劣勢で即 GAMEOVER | 閾値設定が恣意的。方針②（10ターン消化）で同じ効果が自然に得られる |
+
+---
+
+## 15. ダンジョン生成アルゴリズム
+
+**ラベル：[時期未定]** | 議論日：2026-04-20 | 起点：Phase 4実装時
 
 ### 現状
 
@@ -1166,9 +1440,9 @@ GRID_SIZE=51、LOOP_COUNT=200 の固定パラメータ。
 
 ---
 
-## 14. 装備入手方式の変更（ショップ → ガチャ）
+## 16. 装備入手方式の変更（ショップ → ガチャ）
 
-**ラベル：[Phase10後]** | 議論日：2026-04-20 | 起点：Phase 4実装時 | 方針変更：2026-04-27
+**ラベル：[時期未定]** | 議論日：2026-04-20 | 起点：Phase 4実装時 | 方針変更：2026-04-27
 
 ### 現状
 

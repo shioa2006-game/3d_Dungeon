@@ -19,6 +19,10 @@ function healAtCrystal() {
   const old = player.hp;
   player.hp = Math.min(s.hp, player.hp + s.rec);
   const gained = Math.ceil(player.hp - old);
+  GameLog.event('player_heal', {
+    r: onCrystal.r, c: onCrystal.c,
+    hpBefore: old, hpAfter: player.hp, hpMax: s.hp, recValue: s.rec,
+  });
   logMessage(`💎 クリスタルで回復 +${gained} HP (${Math.ceil(player.hp)}/${s.hp})`, 'reward');
   triggerMonsterTurn(player.gridR, player.gridC);
 }
@@ -36,6 +40,12 @@ function openShop() {
   const pool  = shuffle([...SHOP_POOL]);
   Game.state.shopItems        = pool.slice(0, SHOP_ROLL_N);
   Game.state.shopSelectedIdx  = 0;
+  GameLog.event('shop_open', {
+    r: onCrystal.r, c: onCrystal.c,
+    lineup: Game.state.shopItems.map(it => ({
+      slot: it.slot, name: it.name, price: it.price,
+    })),
+  });
   renderShop();
   document.getElementById('shop-modal').hidden = false;
 }
@@ -83,6 +93,15 @@ function buyItem(idx) {
   player.equip[item.slot] = item;
   const s = playerStats();
   if (player.hp > s.hp) player.hp = s.hp;
+  GameLog.event('shop_purchase', {
+    slot:        item.slot,
+    name:        item.name,
+    price:       item.price,
+    soldBack:    existing ? { name: existing.name, price: sellBack } : null,
+    netPrice:    net,
+    goldAfter:   player.gold,
+    bonus:       item.bonus ?? null,
+  });
   logMessage(`🛒 ${item.name} 購入 (-${net}G)`, 'reward');
   closeShop();
   triggerMonsterTurn(player.gridR, player.gridC);

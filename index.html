@@ -52,6 +52,15 @@
     </div>
   </div>
 
+  <!-- Respawn Overlay（プレイヤー死亡 → 復活待機 10ターン） -->
+  <div id="respawn-overlay" hidden>
+    <div class="respawn-inner">
+      <div class="respawn-title">💀 戦闘不能</div>
+      <div class="respawn-countdown">復活まで <span id="respawn-counter">10</span></div>
+      <div class="respawn-hint">[ M ] 全体マップで戦況確認</div>
+    </div>
+  </div>
+
   <!-- Result Screen -->
   <div id="result-screen" hidden>
     <div class="result-inner">
@@ -90,6 +99,7 @@
 <script src="js/shop.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/input.js"></script>
+<script src="js/gamelog.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

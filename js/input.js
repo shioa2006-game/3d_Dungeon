@@ -23,6 +23,7 @@ window.addEventListener('keyup', e => { keys[e.code] = false; });
 
 function handleInput() {
   if (Game.flags.gameEnded) return;
+  if (Game.state.respawnCountdown > 0) return;  // 死亡中は M/R 以外の入力ロック（keydown で個別許可）
 
   if (Game.state.shopItems) {
     _handleShopInput();

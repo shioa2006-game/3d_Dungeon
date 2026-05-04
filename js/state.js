@@ -137,5 +137,6 @@ const Game = {
     gameEnded:           false,
     fullMapOpen:         false,
     restartConfirmOpen:  false,
+    titleShown:          true,   // ページロード時はタイトル画面を表示
   },
 };

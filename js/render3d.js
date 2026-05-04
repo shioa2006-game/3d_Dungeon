@@ -6,6 +6,53 @@ for (let i = 0; i < RAY_COUNT; i++) {
   _hitsBuffer[i] = { hit: false, dist: Infinity, wall: null, rayAngle: 0, wallU01: 0 };
 }
 
+// =====================
+// テクスチャロード（Lv.1）
+//
+// 壁は drawImage(slice) でカラム描画、床/天井は per-pixel サンプリングのため
+// オフスクリーンキャンバス経由で生 Uint8ClampedArray を取り出してキャッシュする。
+// 1セル = CELL_SIZE ワールド単位 = テクスチャ全幅で繰り返す（タイル）。
+// テクスチャは pow2 サイズを前提（マスクで mod を回避）。
+// =====================
+const WALL_TEXTURE    = new Image();
+const FLOOR_TEXTURE   = new Image();
+const CEILING_TEXTURE = new Image();
+WALL_TEXTURE.src    = 'assets/textures/wall_stone.png';
+FLOOR_TEXTURE.src   = 'assets/textures/floor_stone.png';
+CEILING_TEXTURE.src = 'assets/textures/ceiling_stone.png';
+
+let _floorTexData = null, _floorTexW = 0, _floorTexMaskX = 0, _floorTexMaskY = 0;
+let _ceilTexData  = null, _ceilTexW  = 0, _ceilTexMaskX  = 0, _ceilTexMaskY  = 0;
+
+function _bakeTextureBuffer(img) {
+  const w = img.naturalWidth, h = img.naturalHeight;
+  let oc;
+  if (typeof OffscreenCanvas !== 'undefined') {
+    oc = new OffscreenCanvas(w, h);
+  } else {
+    oc = document.createElement('canvas');
+    oc.width = w; oc.height = h;
+  }
+  const oc2d = oc.getContext('2d');
+  oc2d.drawImage(img, 0, 0);
+  return { data: oc2d.getImageData(0, 0, w, h).data, w, h };
+}
+
+FLOOR_TEXTURE.onload = () => {
+  const t = _bakeTextureBuffer(FLOOR_TEXTURE);
+  _floorTexData  = t.data;
+  _floorTexW     = t.w;
+  _floorTexMaskX = t.w - 1;
+  _floorTexMaskY = t.h - 1;
+};
+CEILING_TEXTURE.onload = () => {
+  const t = _bakeTextureBuffer(CEILING_TEXTURE);
+  _ceilTexData  = t.data;
+  _ceilTexW     = t.w;
+  _ceilTexMaskX = t.w - 1;
+  _ceilTexMaskY = t.h - 1;
+};
+
 /**
  * Ray-casting：プレイヤー視点から RAY_COUNT 本のレイを発射し、
  * 各レイが最初に当たる壁を見つける。
@@ -81,14 +128,30 @@ function castRays() {
 }
 
 // =====================
-// 床描画（ピクセル単位）
+// Lv.2 距離ライティング
 //
-// 各床ピクセルから逆算したワールド座標で、近傍クリスタルの陣営色を
-// 加算合成（中心α 0.55 / 2乗フォールオフ）する。Step 3 で陣営占有色も同居予定。
-// ImageData は再利用してアロケーションを避ける。
+// ① 指数フォールオフ：shade = exp(-d / LIGHT_SCALE)
+// ② 方向別シェーディング：縦壁(E/W面)を WALL_DIR_SHADE_V 倍に減光
+// ③ 環境光カラー：暗い暖茶色 (FOG_R, FOG_G, FOG_B) に向けて減衰
+// ④ 天井のフォグスケールを短く（早く暗くなる → 上方向の閉塞感）
+// =====================
+const LIGHT_SCALE_FLOOR   = 160;   // 床/壁の exp スケール（小さいほど早く暗くなる）
+const LIGHT_SCALE_CEILING = 110;   // 天井の exp スケール（より速く暗くなる）
+const WALL_DIR_SHADE_V    = 0.60;  // 縦壁(E/W面)を 40% 暗く（明確な方向別シェーディング）
+const FOG_R = 14, FOG_G = 9, FOG_B = 5;  // 暗い暖茶色（松明の届かない深い闇）
+const FOG_RGB = `rgb(${FOG_R},${FOG_G},${FOG_B})`;
+
+// =====================
+// 床/天井描画（ピクセル単位 + テクスチャサンプリング）
+//
+// テクスチャをワールド座標で UV サンプリング → 距離フォグ → 陣営占有色
+// → 近傍クリスタルグロー加算（中心α 0.65 / 線形フォールオフ）。
+// 床と天井は対称（horizon 距離が同じピクセルは同じ corrDist）なので
+// 1ループで両方を埋める。ImageData は再利用してアロケーションを避ける。
 // =====================
 const _floorBaseR = 20, _floorBaseG = 15, _floorBaseB = 10;
-let _floorImageData = null;
+let _floorImageData   = null;
+let _ceilingImageData = null;
 const _rayCos  = new Float32Array(VIEW3D.w);
 const _raySin  = new Float32Array(VIEW3D.w);
 const _cosCorr = new Float32Array(VIEW3D.w);
@@ -107,10 +170,7 @@ function drawFloor() {
   const fw = R.w | 0;
   const fh = (R.h / 2) | 0;
 
-  if (!_floorImageData) _floorImageData = ctx.createImageData(fw, fh);
-  const data = _floorImageData.data;
-
-  // 列単位のレイ方向と歪み補正（FOVに沿って画面幅で線形補間）
+  // 共通の事前計算：レイ方向、陣営タイント、グロー
   const half = player.fov / 2;
   const base = player.visualAngle - half;
   const span = player.fov;
@@ -157,7 +217,6 @@ function drawFloor() {
     const dx = wx - px, dy = wy - py;
     const d2 = dx * dx + dy * dy;
 
-    // クリスタルがプレイヤーから glowR より外なら FOV+αマージンでカット
     if (d2 > glowR2) {
       const D = Math.sqrt(d2);
       const rel = Math.abs(normalizeAngle(Math.atan2(dy, dx) - player.visualAngle));
@@ -171,24 +230,81 @@ function drawFloor() {
     _nGlows++;
   }
 
-  // 1行目（地平線）はベース色だけ
-  let idx = 0;
+  // テクスチャ未ロード時はベース色フォールバック
+  const texReady = _floorTexData && _ceilTexData;
+
+  if (!_floorImageData)   _floorImageData   = ctx.createImageData(fw, fh);
+  if (!_ceilingImageData) _ceilingImageData = ctx.createImageData(fw, fh);
+  const fData = _floorImageData.data;
+  const cData = _ceilingImageData.data;
+
+  // 1行目（地平線）：暗いベース色
+  let fIdx = 0;
   for (let x = 0; x < fw; x++) {
-    data[idx++] = _floorBaseR;
-    data[idx++] = _floorBaseG;
-    data[idx++] = _floorBaseB;
-    data[idx++] = 255;
+    fData[fIdx++] = _floorBaseR;
+    fData[fIdx++] = _floorBaseG;
+    fData[fIdx++] = _floorBaseB;
+    fData[fIdx++] = 255;
+  }
+  // 天井の地平線行 = 天井バッファの最終行（fh-1）
+  const cHor = (fh - 1) * fw * 4;
+  for (let x = 0; x < fw; x++) {
+    const o = cHor + x * 4;
+    cData[o] = 4; cData[o + 1] = 3; cData[o + 2] = 3; cData[o + 3] = 255;
   }
 
-  // 2行目以降：各ピクセル → ワールド座標 → 陣営占有色 + クリスタルグロー加算
+  // テクスチャ参照定数（内側ループで頻繁に使うのでローカル変数に展開）
+  const ftw = _floorTexW, fmx = _floorTexMaskX, fmy = _floorTexMaskY;
+  const fpC = texReady ? ftw / CELL_SIZE : 0;
+  const ftBuf = _floorTexData;
+  const ctw = _ceilTexW, cmx = _ceilTexMaskX, cmy = _ceilTexMaskY;
+  const cpC = texReady ? ctw / CELL_SIZE : 0;
+  const ctBuf = _ceilTexData;
+
+  // 距離フォグ：指数フォールオフ（床/天井で別スケール、暖茶色のフォグへ減衰）
+  const FLOOR_FOG_INV = 1 / LIGHT_SCALE_FLOOR;
+  const CEIL_FOG_INV  = 1 / LIGHT_SCALE_CEILING;
+
   for (let y = 1; y < fh; y++) {
     const corrDist = WALL_HEIGHT_CONST / (2 * y);
+    const cRowBase = (fh - 1 - y) * fw * 4;
+
     for (let x = 0; x < fw; x++) {
       const actualDist = corrDist / _cosCorr[x];
       const wx = px + actualDist * _rayCos[x];
       const wy = py + actualDist * _raySin[x];
 
-      let r = _floorBaseR, g = _floorBaseG, b = _floorBaseB;
+      const shade     = Math.exp(-actualDist * FLOOR_FOG_INV);
+      const ceilShade = Math.exp(-actualDist * CEIL_FOG_INV);
+      const fogA      = 1 - shade;
+      const fogCA     = 1 - ceilShade;
+
+      // === 共有: クリスタルグロー寄与（床/天井で同じ wx,wy → 1回計算で両方に流用） ===
+      let glowAR = 0, glowAG = 0, glowAB = 0;
+      for (let i = 0; i < _nGlows; i++) {
+        const cg = _glowsBuf[i];
+        const dx = wx - cg.wx, dy = wy - cg.wy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > glowR2) continue;
+        const t = 1 - Math.sqrt(d2) / glowR;
+        const inten = t * glowA;
+        glowAR += cg.cR * inten;
+        glowAG += cg.cG * inten;
+        glowAB += cg.cB * inten;
+      }
+
+      // === 床 ===
+      let r, g, b;
+      if (texReady) {
+        const fX = ((wx * fpC) | 0) & fmx;
+        const fY = ((wy * fpC) | 0) & fmy;
+        const fT = (fY * ftw + fX) * 4;
+        r = ftBuf[fT]     * shade + FOG_R * fogA + glowAR;
+        g = ftBuf[fT + 1] * shade + FOG_G * fogA + glowAG;
+        b = ftBuf[fT + 2] * shade + FOG_B * fogA + glowAB;
+      } else {
+        r = _floorBaseR; g = _floorBaseG; b = _floorBaseB;
+      }
 
       // 陣営占有色（cellBlockIdx の sentinel スロットで条件分岐を回避）
       const gridR = (wy / CELL_SIZE) | 0;
@@ -200,30 +316,39 @@ function drawFloor() {
         b += _blockTintB[bIdx];
       }
 
-      // クリスタルグロー加算
-      for (let i = 0; i < _nGlows; i++) {
-        const cg = _glowsBuf[i];
-        const dx = wx - cg.wx, dy = wy - cg.wy;
-        const d2 = dx * dx + dy * dy;
-        if (d2 > glowR2) continue;
-        const t = 1 - Math.sqrt(d2) / glowR;  // 線形フォールオフ
-        const inten = t * glowA;
-        r += cg.cR * inten;
-        g += cg.cG * inten;
-        b += cg.cB * inten;
-      }
-
       if (r > 255) r = 255;
       if (g > 255) g = 255;
       if (b > 255) b = 255;
 
-      data[idx++] = r;
-      data[idx++] = g;
-      data[idx++] = b;
-      data[idx++] = 255;
+      fData[fIdx++] = r;
+      fData[fIdx++] = g;
+      fData[fIdx++] = b;
+      fData[fIdx++] = 255;
+
+      // === 天井（テクスチャ + 短スケールの指数フォグ + クリスタルグロー減衰版） ===
+      const cOff = cRowBase + x * 4;
+      if (texReady) {
+        const cX = ((wx * cpC) | 0) & cmx;
+        const cY = ((wy * cpC) | 0) & cmy;
+        const cT = (cY * ctw + cX) * 4;
+        const cgMult = CRYSTAL_GLOW_WALL_RATIO;  // 天井は壁と同等の減衰比
+        let cr = ctBuf[cT]     * ceilShade + FOG_R * fogCA + glowAR * cgMult;
+        let cg = ctBuf[cT + 1] * ceilShade + FOG_G * fogCA + glowAG * cgMult;
+        let cb = ctBuf[cT + 2] * ceilShade + FOG_B * fogCA + glowAB * cgMult;
+        if (cr > 255) cr = 255;
+        if (cg > 255) cg = 255;
+        if (cb > 255) cb = 255;
+        cData[cOff]     = cr;
+        cData[cOff + 1] = cg;
+        cData[cOff + 2] = cb;
+        cData[cOff + 3] = 255;
+      } else {
+        cData[cOff] = 15; cData[cOff + 1] = 18; cData[cOff + 2] = 25; cData[cOff + 3] = 255;
+      }
     }
   }
 
+  ctx.putImageData(_ceilingImageData, R.x, R.y);
   ctx.putImageData(_floorImageData, R.x, R.y + fh);
 }
 
@@ -233,7 +358,7 @@ function drawView3D(hits) {
   ctx.save();
   ctx.beginPath(); ctx.rect(R.x, R.y, R.w, R.h); ctx.clip();
 
-  fillRect(R.x, R.y, R.w, R.h / 2, 15, 18, 25);
+  // 床/天井（テクスチャサンプリング、グロー/タイント込み）
   drawFloor();
 
   const colW   = R.w / RAY_COUNT;
@@ -242,6 +367,17 @@ function drawView3D(hits) {
   const glowR  = CRYSTAL_GLOW_RADIUS_CELLS * CELL_SIZE;
   const glowR2 = glowR * glowR;
   const glowAW = CRYSTAL_GLOW_ALPHA_CENTER * CRYSTAL_GLOW_WALL_RATIO;
+
+  // 壁テクスチャの参照（未ロード時はベタ色フォールバック）
+  const wallTex = WALL_TEXTURE;
+  const wallTexReady = wallTex.complete && wallTex.naturalWidth > 0;
+  const wTW = wallTexReady ? wallTex.naturalWidth : 0;
+  const wTH = wallTexReady ? wallTex.naturalHeight : 0;
+
+  // 距離フォグオーバーレイ用に暖茶色を初期セット
+  ctx.fillStyle = FOG_RGB;
+
+  const WALL_FOG_INV = 1 / LIGHT_SCALE_FLOOR;
 
   for (let i = 0; i < hits.length; i++) {
     const h = hits[i];
@@ -253,38 +389,63 @@ function drawView3D(hits) {
     depthBuffer[i] = corrDist;
 
     let wallH = WALL_HEIGHT_CONST / corrDist;
-    wallH = wallH - (wallH % RETRO_STEP);
     wallH = clamp(wallH, 0, R.h * 2);
 
-    const y0     = R.y + R.h / 2 - wallH / 2;
-    const base   = h.wall.col;
-    const shade  = clamp(1.0 - corrDist / 500.0, 0.1, 1.0);
-    const texU   = wallTextureU(h.wall.a, h.wall.b, h.wallU01);
-    const pillar = (texU % TEXTURE_PERIOD) < TEXTURE_PILLAR;
-    let cr = base[0] * shade, cg = base[1] * shade, cb = base[2] * shade;
-    if (pillar) { cr *= 0.5; cg *= 0.5; cb *= 0.5; }
+    const y0    = R.y + R.h / 2 - wallH / 2;
+    const texU  = wallTextureU(h.wall.a, h.wall.b, h.wallU01);
+    // ① 指数フォールオフ + ② 方向別シェーディング（縦壁=E/W面を暗く）
+    const distShade = Math.exp(-corrDist * WALL_FOG_INV);
+    const dirShade  = (h.wall.a.x === h.wall.b.x) ? WALL_DIR_SHADE_V : 1.0;
+    const shade     = distShade * dirShade;
 
-    // 壁ヒット点のクリスタルグロー加算
-    if (_nGlows > 0) {
-      const wx = px + Math.cos(h.rayAngle) * h.dist;
-      const wy = py + Math.sin(h.rayAngle) * h.dist;
-      for (let k = 0; k < _nGlows; k++) {
-        const cgw = _glowsBuf[k];
-        const dx = wx - cgw.wx, dy = wy - cgw.wy;
-        const d2 = dx * dx + dy * dy;
-        if (d2 > glowR2) continue;
-        const t = 1 - Math.sqrt(d2) / glowR;
-        const inten = t * glowAW;
-        cr += cgw.cR * inten;
-        cg += cgw.cG * inten;
-        cb += cgw.cB * inten;
+    if (wallTexReady) {
+      // テクスチャの 1セル分（=CELL_SIZE ワールド単位）が画像幅にマップされる前提でタイル
+      const u01  = (((texU % CELL_SIZE) + CELL_SIZE) % CELL_SIZE) / CELL_SIZE;
+      const texX = (u01 * wTW) | 0;
+      ctx.drawImage(wallTex, texX, 0, 1, wTH, x0, y0, colW + 0.5, wallH);
+
+      // 距離フォグ（黒オーバーレイ）
+      if (shade < 1) {
+        ctx.globalAlpha = 1 - shade;
+        ctx.fillRect(x0, y0, colW + 0.5, wallH);
+        ctx.globalAlpha = 1;
       }
-      if (cr > 255) cr = 255;
-      if (cg > 255) cg = 255;
-      if (cb > 255) cb = 255;
-    }
 
-    fillRect(x0, y0, colW + 0.5, wallH, cr | 0, cg | 0, cb | 0);
+      // 壁ヒット点のクリスタルグロー加算（lighter 合成）
+      if (_nGlows > 0) {
+        const wx = px + Math.cos(h.rayAngle) * h.dist;
+        const wy = py + Math.sin(h.rayAngle) * h.dist;
+        let gR = 0, gG = 0, gB = 0;
+        for (let k = 0; k < _nGlows; k++) {
+          const cgw = _glowsBuf[k];
+          const dx = wx - cgw.wx, dy = wy - cgw.wy;
+          const d2 = dx * dx + dy * dy;
+          if (d2 > glowR2) continue;
+          const t = 1 - Math.sqrt(d2) / glowR;
+          const inten = t * glowAW;
+          gR += cgw.cR * inten;
+          gG += cgw.cG * inten;
+          gB += cgw.cB * inten;
+        }
+        if (gR > 0 || gG > 0 || gB > 0) {
+          if (gR > 255) gR = 255;
+          if (gG > 255) gG = 255;
+          if (gB > 255) gB = 255;
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.fillStyle = `rgb(${gR | 0},${gG | 0},${gB | 0})`;
+          ctx.fillRect(x0, y0, colW + 0.5, wallH);
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.fillStyle = FOG_RGB;
+        }
+      }
+    } else {
+      // フォールバック：旧来のベタ色 + ピラー
+      const base   = h.wall.col;
+      const pillar = (texU % TEXTURE_PERIOD) < TEXTURE_PILLAR;
+      let cr = base[0] * shade, cg = base[1] * shade, cb = base[2] * shade;
+      if (pillar) { cr *= 0.5; cg *= 0.5; cb *= 0.5; }
+      fillRect(x0, y0, colW + 0.5, wallH, cr | 0, cg | 0, cb | 0);
+    }
   }
 
   ctx.restore();
@@ -356,6 +517,13 @@ const _spritesBuffer = [];
 const _cellCounter   = new Map();
 const _monsterCellIdx = new Map();
 
+// スプライト着色用の使い回しオフスクリーンキャンバス
+// （source-atop でスプライト形状のみ着色するため、透明背景の場で合成する必要がある）
+const _spriteTintCanvas = (typeof OffscreenCanvas !== 'undefined')
+  ? new OffscreenCanvas(256, 256)
+  : (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 256; return c; })();
+const _spriteTintCtx = _spriteTintCanvas.getContext('2d');
+
 /**
  * モンスターとクリスタルを Z-sort（遠→近）してテクスチャ描画。
  * castRays で更新した depthBuffer と比較して壁裏のスプライトを隠す。
@@ -412,6 +580,13 @@ function drawSprites() {
   ctx.save();
   ctx.beginPath(); ctx.rect(R.x, R.y, R.w, R.h); ctx.clip();
 
+  // スプライトの環境光計算用定数
+  const spGlowR     = CRYSTAL_GLOW_RADIUS_CELLS * CELL_SIZE;
+  const spGlowR2    = spGlowR * spGlowR;
+  const spGlowA     = CRYSTAL_GLOW_ALPHA_CENTER;
+  const SPRITE_GLOW_TINT_MAX = 0.45;  // グロー着色の上限α（強すぎないよう抑制）
+  const px = player.pos.x, py = player.pos.y;
+
   for (const sp of sprites) {
     const { dx, dy, dist } = sp;
     if (dist < 1) continue;
@@ -422,6 +597,27 @@ function drawSprites() {
     const corrDist    = Math.max(MIN_DIST, dist * Math.cos(relAngle));
     const colF        = (relAngle + player.fov / 2) / player.fov * (RAY_COUNT - 1);
     const screenXCent = colF * colW;
+
+    // === スプライト位置での環境光計算 ===
+    // 距離フォグ（壁/床と同じスケール、クリスタルも普通にフェードアウト）
+    const distShade = Math.exp(-corrDist / LIGHT_SCALE_FLOOR);
+
+    // クリスタルグロー寄与（モンスターのみ。クリスタル自身は光源なので適用しない）
+    let glowAddR = 0, glowAddG = 0, glowAddB = 0;
+    if (sp.kind === 'monster' && _nGlows > 0) {
+      const spWX = px + dx, spWY = py + dy;
+      for (let i = 0; i < _nGlows; i++) {
+        const cg = _glowsBuf[i];
+        const gdx = spWX - cg.wx, gdy = spWY - cg.wy;
+        const gd2 = gdx * gdx + gdy * gdy;
+        if (gd2 > spGlowR2) continue;
+        const t = 1 - Math.sqrt(gd2) / spGlowR;
+        const inten = t * spGlowA;
+        glowAddR += cg.cR * inten;
+        glowAddG += cg.cG * inten;
+        glowAddB += cg.cB * inten;
+      }
+    }
 
     if (sp.kind === 'monster') {
       const m      = sp.data;
@@ -438,20 +634,60 @@ function drawSprites() {
       const spriteLeft = screenXCent - spriteW / 2;
       const spriteTop  = floorY - spriteH;
 
+      // === オフスクリーンに「減光 + グロー着色済み」のスプライトを合成 ===
+      const totalGlow = glowAddR + glowAddG + glowAddB;
+      const needTint  = totalGlow > 1;
+      const needShade = distShade < 0.999;
+      const tintW     = img.naturalWidth;
+      const tintH     = img.naturalHeight;
+
+      let srcImg;
+      if (needTint || needShade) {
+        if (_spriteTintCanvas.width  < tintW) _spriteTintCanvas.width  = tintW;
+        if (_spriteTintCanvas.height < tintH) _spriteTintCanvas.height = tintH;
+        _spriteTintCtx.clearRect(0, 0, tintW, tintH);
+        // フル不透明で描画（透明にせず、後で source-atop で減光する）
+        _spriteTintCtx.drawImage(img, 0, 0);
+        // 距離による減光：source-atop で黒オーバーレイ（スプライト形状のみ暗くなる、不透明性は維持）
+        if (needShade) {
+          _spriteTintCtx.globalCompositeOperation = 'source-atop';
+          _spriteTintCtx.fillStyle = `rgba(0,0,0,${1 - distShade})`;
+          _spriteTintCtx.fillRect(0, 0, tintW, tintH);
+        }
+        // クリスタルグロー着色（減光後の色に乗せる）
+        if (needTint) {
+          const maxCh = glowAddR > glowAddG ? (glowAddR > glowAddB ? glowAddR : glowAddB)
+                                            : (glowAddG > glowAddB ? glowAddG : glowAddB);
+          const tintA = Math.min(SPRITE_GLOW_TINT_MAX, maxCh / 255 * 1.2);
+          const gR = glowAddR > 255 ? 255 : glowAddR | 0;
+          const gG = glowAddG > 255 ? 255 : glowAddG | 0;
+          const gB = glowAddB > 255 ? 255 : glowAddB | 0;
+          if (!needShade) _spriteTintCtx.globalCompositeOperation = 'source-atop';
+          _spriteTintCtx.fillStyle = `rgba(${gR},${gG},${gB},${tintA})`;
+          _spriteTintCtx.fillRect(0, 0, tintW, tintH);
+        }
+        if (needShade || needTint) {
+          _spriteTintCtx.globalCompositeOperation = 'source-over';
+        }
+        srcImg = _spriteTintCanvas;
+      } else {
+        srcImg = img;
+      }
+
       const colStart = Math.max(0,             Math.floor(spriteLeft / colW));
       const colEnd   = Math.min(RAY_COUNT - 1, Math.ceil((spriteLeft + spriteW) / colW));
       for (let col = colStart; col <= colEnd; col++) {
         if (depthBuffer[col] < corrDist) continue;
         const progress = (col * colW - spriteLeft) / spriteW;
         if (progress < 0 || progress > 1) continue;
-        const srcX = progress * img.naturalWidth;
-        const srcW = Math.max(1, (colW / spriteW) * img.naturalWidth);
-        ctx.drawImage(img, srcX, 0, srcW, img.naturalHeight,
+        const srcX = progress * tintW;
+        const srcW = Math.max(1, (colW / spriteW) * tintW);
+        ctx.drawImage(srcImg, srcX, 0, srcW, tintH,
           R.x + col * colW, R.y + spriteTop, colW + 0.5, spriteH);
       }
 
     } else {
-      // クリスタル
+      // クリスタル（光源そのもの。距離減光のみ、グロー着色は無し）
       const cr  = sp.data;
       const img = CRYSTAL_IMGS[cr.owner];
       if (!img || !img.complete || img.naturalWidth === 0) continue;
@@ -467,6 +703,7 @@ function drawSprites() {
 
       const colStart = Math.max(0,             Math.floor(spriteLeft / colW));
       const colEnd   = Math.min(RAY_COUNT - 1, Math.ceil((spriteLeft + spriteW) / colW));
+      ctx.globalAlpha = distShade;
       for (let col = colStart; col <= colEnd; col++) {
         if (depthBuffer[col] < corrDist) continue;
         const progress = (col * colW - spriteLeft) / spriteW;
@@ -476,6 +713,7 @@ function drawSprites() {
         ctx.drawImage(img, srcX, 0, srcW, img.naturalHeight,
           R.x + col * colW, R.y + spriteTop, colW + 0.5, spriteH);
       }
+      ctx.globalAlpha = 1;
     }
   }
 

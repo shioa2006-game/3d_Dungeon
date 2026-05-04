@@ -66,7 +66,7 @@
     <div class="result-inner">
       <div class="result-title" id="result-title"></div>
       <div class="result-detail" id="result-detail"></div>
-      <button class="result-restart-btn" id="btn-result-restart">🔄 もう一度プレイ [R]</button>
+      <button class="result-restart-btn" id="btn-result-restart">← タイトルへ戻る [Enter]</button>
     </div>
   </div>
 
@@ -85,6 +85,19 @@
     </div>
   </div>
 
+  <!-- タイトル画面（z-index:100、起動時に表示） -->
+  <div id="title-screen">
+    <img id="title-art" src="assets/title/title_art.png" alt="Crystal Liberator" />
+    <div id="title-menu">
+      <label class="title-toggle">
+        <input type="checkbox" id="title-log-toggle" checked />
+        <span>ゲームログを保存する</span>
+      </label>
+      <button id="title-start-btn">▶ START</button>
+      <div id="title-prompt">[ Enter ] / [ Click ] でゲーム開始</div>
+    </div>
+  </div>
+
 </div>
 <script src="js/config.js"></script>
 <script src="js/state.js"></script>
@@ -100,6 +113,7 @@
 <script src="js/ui.js"></script>
 <script src="js/input.js"></script>
 <script src="js/gamelog.js"></script>
+<script src="js/title.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

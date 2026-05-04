@@ -8,6 +8,7 @@ canvas.height = CANVAS_H;
 
 // Wheel（canvas 参照が必要なため main.js で登録）
 canvas.addEventListener('wheel', e => {
+  if (Game.flags.titleShown) return;  // タイトル中は無効
   e.preventDefault();
   const player = Game.state.player;
   if (player.moving || Game.flags.monstersAnimating) return;
@@ -19,7 +20,10 @@ canvas.addEventListener('wheel', e => {
 // 静的UI要素のクリックハンドラ
 // =====================
 document.getElementById('btn-shop-close')   .addEventListener('click', () => closeShop());
-document.getElementById('btn-result-restart').addEventListener('click', () => showRestartConfirm());
+document.getElementById('btn-result-restart').addEventListener('click', () => {
+  document.getElementById('result-screen').hidden = true;
+  Title.show();
+});
 document.getElementById('btn-restart-yes')  .addEventListener('click', () => confirmRestart());
 document.getElementById('btn-restart-no')   .addEventListener('click', () => cancelRestartConfirm());
 
@@ -107,11 +111,13 @@ function newMaze() {
 // =====================
 // 初期化
 // =====================
+// 起動時はタイトル画面を表示。ゲーム開始は Title 経由で newMaze() が呼ばれる。
+// 初期マップはタイトル背景の裏で空回しするため、最低限の状態だけ整えておく。
 initExplored();
 generateMazeUntilValid();   // grid/walls/crystals を一括確定
 spawnMonsters();
 initPlayerStats();
-GameLog.start();
+Title.init();
 
 // =====================
 // 復活待機オーバーレイ UI

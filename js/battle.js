@@ -426,27 +426,13 @@ function endBattle(result) {
 // =====================
 function playerDeath(killerRace) {
   const player = Game.state.player;
-  const humanCrystals = Game.state.crystals.filter(c => c.owner === 'human');
   const goldBefore = player.gold;
   const deathR = player.gridR, deathC = player.gridC;
-  if (humanCrystals.length === 1) {
-    // 最後の1拠点 → 敵に陥落させて敗北判定に委ねる
-    const lastCr = humanCrystals[0];
-    const prevOwner = lastCr.owner;
-    lastCr.owner      = killerRace;
-    lastCr.spawnTimer = 0;
-    GameLog.event('crystal_capture', {
-      r: lastCr.r, c: lastCr.c, blockR: lastCr.blockR, blockC: lastCr.blockC,
-      fromOwner: prevOwner, toOwner: killerRace,
-      capturer: { kind: 'unit', race: killerRace, faction: killerRace },
-    });
-    GameLog.event('player_death', {
-      r: deathR, c: deathC, killerFaction: killerRace, goldLost: 0,
-      lastStand: true,
-    });
-    logMessage(`💥 最後の人間族クリスタルが${FACTIONS[killerRace].name}に陥落！`, 'occupy');
-    return;
-  }
+
+  // lastStand（残り1クリスタルの即時敵譲渡）は Iter 4 後に廃止。
+  // クリスタル数に関わらず通常死亡フローへ統一し、10ターン待機の間に
+  // 敵が残りクリスタルを奪えば自然に GAMEOVER（checkWinLoss が打ち切り）、
+  // 守り切れば最後の1個に復活する設計とする。
   player.gold = Math.floor(player.gold / 2);
 
   // 装備1個ランダムロスト（Iteration 1：死亡ペナルティ強化）
@@ -461,7 +447,7 @@ function playerDeath(killerRace) {
 
   GameLog.event('player_death', {
     r: deathR, c: deathC, killerFaction: killerRace,
-    goldLost: goldBefore - player.gold, lastStand: false,
+    goldLost: goldBefore - player.gold,
     equipLost: lostEquip,
   });
 

@@ -2,10 +2,22 @@ const keys            = {};
 const keysJustPressed = new Set();
 
 window.addEventListener('keydown', e => {
+  // タイトル表示中はゲーム入力を完全ブロック（タイトル側で Enter/Space を処理）
+  if (Game.flags.titleShown) return;
+
   if (!keys[e.code]) keysJustPressed.add(e.code);
   keys[e.code] = true;
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code))
     e.preventDefault();
+
+  // ゲーム結果画面が表示中の場合：Enter / Space でタイトルへ戻る
+  if (Game.flags.gameEnded) {
+    if (e.code === 'Enter' || e.code === 'Space') {
+      document.getElementById('result-screen').hidden = true;
+      Title.show();
+    }
+    return;
+  }
 
   // リセット確認ダイアログが開いている間は Y/N/Escape のみ受け付ける
   if (Game.flags.restartConfirmOpen) {

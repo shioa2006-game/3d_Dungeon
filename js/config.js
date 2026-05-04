@@ -25,7 +25,8 @@ const SAME_CELL_DEPTH_OFFSET = 8;  // 同一マス複数ユニットの奥行き
 
 const MOVE_FRAMES   = 8;
 const ROT_FRAMES    = 6;
-const ROT_SPRING_K  = 0.10;  // 回転スプリング係数（0.10=なめらか〜0.40=キビキビ）
+const ROT_SPRING_K  = 0.18;  // 回転スプリング係数（##18 で 0.10→0.18 に高速化、0.40=キビキビ）
+const ROT_SNAP_THRESHOLD = 0.005;  // この角度差以下で目標角度にスナップ（##18）
 
 // 向き定義: 0=N 1=E 2=S 3=W
 const FACING_DIRS = [

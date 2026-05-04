@@ -200,7 +200,7 @@ function gameLoop() {
   const player = Game.state.player;
   const isActive =
     player.moving ||
-    Math.abs(player.visualAngle - player.angle) > 0.0001 ||
+    Math.abs(player.visualAngle - player.angle) > ROT_SNAP_THRESHOLD ||
     Game.flags.monstersAnimating ||
     Game.flags.battleNeedsRerender ||
     Game.flags.forceRedraw ||

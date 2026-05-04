@@ -183,6 +183,11 @@ function updatePlayer() {
   }
 
   // スプリングモデル: visualAngle が player.angle に向かって毎フレーム追従
+  // ##18 ROT_SNAP_THRESHOLD 以下になったら即スナップ（小数点以下のフレームを節約）
   const rotDiff = normalizeAngle(player.angle - player.visualAngle);
-  player.visualAngle += rotDiff * ROT_SPRING_K;
+  if (Math.abs(rotDiff) < ROT_SNAP_THRESHOLD) {
+    player.visualAngle = player.angle;
+  } else {
+    player.visualAngle += rotDiff * ROT_SPRING_K;
+  }
 }

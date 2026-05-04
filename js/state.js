@@ -138,5 +138,6 @@ const Game = {
     fullMapOpen:         false,
     restartConfirmOpen:  false,
     titleShown:          true,   // ページロード時はタイトル画面を表示
+    forceRedraw:         true,   // 静止中スキップ時、明示的に再描画を要求するワンショット（##18）
   },
 };

@@ -47,6 +47,7 @@ const LOG_CATEGORY_LABELS = {
 
 function logMessage(text, category = 'system') {
   const messageLog = Game.state.messageLog;
+  Game.flags.forceRedraw = true;   // ##18 状態変化を伴うイベントは描画をリクエスト
   // 直前ログと本文一致なら count を増やす（連続重複のみ統合）
   const last = messageLog[0];
   if (last && last.text === text && last.category === category) {

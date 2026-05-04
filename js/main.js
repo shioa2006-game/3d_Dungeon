@@ -105,6 +105,8 @@ function newMaze() {
   spawnPlayerAtHome();
   updateOnCrystal();
 
+  Game.flags.forceRedraw = true;   // ##18 ゲーム再開時に1フレーム強制描画
+
   GameLog.start();
 }
 
@@ -170,10 +172,9 @@ function _advanceRespawnIfDue() {
 // =====================
 // Game loop
 // =====================
-function gameLoop() {
-  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-  fillRect(0, 0, CANVAS_W, CANVAS_H, 10, 10, 10);
+let _wasActive = false;   // ##18 静止中スキップ: 直前フレームがアクティブだったか
 
+function gameLoop() {
   _advanceRespawnIfDue();
 
   handleInput();
@@ -193,16 +194,41 @@ function gameLoop() {
     if (Game.state.battleState) renderBattle();
   }
 
-  if (!Game.state.battleState) {
-    const hits = castRays();
-    drawView3D(hits);
-    drawCompass();
-    drawSprites();
+  // ##18: 静止中の描画スキップ
+  // 動きや状態変化があるフレームのみ canvas を再描画する。
+  // 直前フレームがアクティブで今フレーム静止 = 確定フレームなので描画。
+  const player = Game.state.player;
+  const isActive =
+    player.moving ||
+    Math.abs(player.visualAngle - player.angle) > 0.0001 ||
+    Game.flags.monstersAnimating ||
+    Game.flags.battleNeedsRerender ||
+    Game.flags.forceRedraw ||
+    !!Game.state.battleState ||
+    !!Game.state.shopItems ||
+    Game.state.respawnCountdown > 0;
+
+  // タイトル表示中は canvas を描画しない（タイトル画像が前面に被さっている）
+  const skipDraw = Game.flags.titleShown || (!isActive && !_wasActive);
+
+  if (!skipDraw) {
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    fillRect(0, 0, CANVAS_W, CANVAS_H, 10, 10, 10);
+
+    if (!Game.state.battleState) {
+      const hits = castRays();
+      drawView3D(hits);
+      drawCompass();
+      drawSprites();
+    }
+    drawMinimap();
+    drawUIRight();
+    drawUIBottom();
+    drawFullMap();
+
+    Game.flags.forceRedraw = false;
   }
-  drawMinimap();
-  drawUIRight();
-  drawUIBottom();
-  drawFullMap();
+  _wasActive = isActive;
 
   keysJustPressed.clear();
   requestAnimationFrame(gameLoop);

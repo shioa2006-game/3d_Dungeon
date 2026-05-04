@@ -148,10 +148,20 @@ const FOG_RGB = `rgb(${FOG_R},${FOG_G},${FOG_B})`;
 // → 近傍クリスタルグロー加算（中心α 0.65 / 線形フォールオフ）。
 // 床と天井は対称（horizon 距離が同じピクセルは同じ corrDist）なので
 // 1ループで両方を埋める。ImageData は再利用してアロケーションを避ける。
+//
+// ##18: ハーフ解像度レンダリング
+//   FLOOR_RES_DIVISOR で per-pixel ループのコストを 1/N² に削減。
+//   オフスクリーンキャンバスに描いて drawImage で本キャンバスへ拡大コピー。
+//   テクスチャ自体に細部があるため拡大時の滲みは目立ちにくい。
 // =====================
+const FLOOR_RES_DIVISOR = 2;
 const _floorBaseR = 20, _floorBaseG = 15, _floorBaseB = 10;
 let _floorImageData   = null;
 let _ceilingImageData = null;
+let _floorOffCanvas   = null;
+let _floorOffCtx      = null;
+let _ceilingOffCanvas = null;
+let _ceilingOffCtx    = null;
 const _rayCos  = new Float32Array(VIEW3D.w);
 const _raySin  = new Float32Array(VIEW3D.w);
 const _cosCorr = new Float32Array(VIEW3D.w);
@@ -167,8 +177,11 @@ const _blockTintB = new Float32Array(26);
 function drawFloor() {
   const player = Game.state.player;
   const R = VIEW3D;
-  const fw = R.w | 0;
-  const fh = (R.h / 2) | 0;
+  // 表示上のサイズと、ハーフ解像度での内部レンダリングサイズ
+  const fullW = R.w | 0;
+  const fullH = (R.h / 2) | 0;
+  const fw = (fullW / FLOOR_RES_DIVISOR) | 0;
+  const fh = (fullH / FLOOR_RES_DIVISOR) | 0;
 
   // 共通の事前計算：レイ方向、陣営タイント、グロー
   const half = player.fov / 2;
@@ -233,8 +246,19 @@ function drawFloor() {
   // テクスチャ未ロード時はベース色フォールバック
   const texReady = _floorTexData && _ceilTexData;
 
-  if (!_floorImageData)   _floorImageData   = ctx.createImageData(fw, fh);
-  if (!_ceilingImageData) _ceilingImageData = ctx.createImageData(fw, fh);
+  // ハーフ解像度の ImageData とオフスクリーンキャンバスを遅延確保
+  if (!_floorImageData || _floorImageData.width !== fw)   _floorImageData   = ctx.createImageData(fw, fh);
+  if (!_ceilingImageData || _ceilingImageData.width !== fw) _ceilingImageData = ctx.createImageData(fw, fh);
+  if (!_floorOffCanvas || _floorOffCanvas.width !== fw) {
+    _floorOffCanvas   = document.createElement('canvas');
+    _floorOffCanvas.width  = fw;
+    _floorOffCanvas.height = fh;
+    _floorOffCtx      = _floorOffCanvas.getContext('2d');
+    _ceilingOffCanvas = document.createElement('canvas');
+    _ceilingOffCanvas.width  = fw;
+    _ceilingOffCanvas.height = fh;
+    _ceilingOffCtx    = _ceilingOffCanvas.getContext('2d');
+  }
   const fData = _floorImageData.data;
   const cData = _ceilingImageData.data;
 
@@ -265,8 +289,11 @@ function drawFloor() {
   const FLOOR_FOG_INV = 1 / LIGHT_SCALE_FLOOR;
   const CEIL_FOG_INV  = 1 / LIGHT_SCALE_CEILING;
 
+  // 内部解像度 y を「等価な全解像度 y」に補正してから corrDist を求める
+  // （全解像度で y=2 のピクセルに相当する位置を半解像度の y=1 がレンダリングする）
+  const CORR_DIST_NUMER = WALL_HEIGHT_CONST / (2 * FLOOR_RES_DIVISOR);
   for (let y = 1; y < fh; y++) {
-    const corrDist = WALL_HEIGHT_CONST / (2 * y);
+    const corrDist = CORR_DIST_NUMER / y;
     const cRowBase = (fh - 1 - y) * fw * 4;
 
     for (let x = 0; x < fw; x++) {
@@ -348,8 +375,11 @@ function drawFloor() {
     }
   }
 
-  ctx.putImageData(_ceilingImageData, R.x, R.y);
-  ctx.putImageData(_floorImageData, R.x, R.y + fh);
+  // ハーフ解像度の ImageData を一旦オフスクリーンに書いて、本キャンバスへ 2倍に拡大コピー
+  _ceilingOffCtx.putImageData(_ceilingImageData, 0, 0);
+  _floorOffCtx.putImageData(_floorImageData, 0, 0);
+  ctx.drawImage(_ceilingOffCanvas, 0, 0, fw, fh, R.x, R.y,           fullW, fullH);
+  ctx.drawImage(_floorOffCanvas,   0, 0, fw, fh, R.x, R.y + fullH,   fullW, fullH);
 }
 
 function drawView3D(hits) {

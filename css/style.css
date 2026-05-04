@@ -659,11 +659,18 @@ canvas { display: block; }
   border-radius: 3px;
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
-#title-start-btn:hover {
+#title-start-btn:hover:not(:disabled) {
   background: rgba(40, 70, 130, 0.92);
   border-color: #88aaee;
   color: #fff;
   box-shadow: 0 0 16px rgba(100, 140, 220, 0.55);
+}
+#title-start-btn:disabled {
+  background: rgba(20, 20, 30, 0.7);
+  border-color: rgba(100, 100, 120, 0.4);
+  color: rgba(180, 180, 200, 0.55);
+  cursor: progress;
+  letter-spacing: 0.1em;
 }
 
 #title-prompt {

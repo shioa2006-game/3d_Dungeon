@@ -306,6 +306,10 @@ function drawFloor() {
   // 内部解像度 y を「等価な全解像度 y」に補正してから corrDist を求める
   // （全解像度で y=2 のピクセルに相当する位置を半解像度の y=1 がレンダリングする）
   const CORR_DIST_NUMER = WALL_HEIGHT_CONST / (2 * FLOOR_RES_DIVISOR);
+  // ##18 新C: グロー無し時の高速パス（_nGlows==0 ならグロー累積と加算を完全スキップ）
+  const hasGlow = _nGlows > 0;
+  const ceilGlowMult = CRYSTAL_GLOW_WALL_RATIO;
+
   for (let y = 1; y < fh; y++) {
     const corrDist = CORR_DIST_NUMER / y;
     const cRowBase = (fh - 1 - y) * fw * 4;
@@ -323,18 +327,20 @@ function drawFloor() {
       const fogA      = 1 - shade;
       const fogCA     = 1 - ceilShade;
 
-      // === 共有: クリスタルグロー寄与（床/天井で同じ wx,wy → 1回計算で両方に流用） ===
+      // === グロー寄与（床/天井で同じ wx,wy → 1回計算） ===
       let glowAR = 0, glowAG = 0, glowAB = 0;
-      for (let i = 0; i < _nGlows; i++) {
-        const cg = _glowsBuf[i];
-        const dx = wx - cg.wx, dy = wy - cg.wy;
-        const d2 = dx * dx + dy * dy;
-        if (d2 > glowR2) continue;
-        const t = 1 - Math.sqrt(d2) / glowR;
-        const inten = t * glowA;
-        glowAR += cg.cR * inten;
-        glowAG += cg.cG * inten;
-        glowAB += cg.cB * inten;
+      if (hasGlow) {
+        for (let i = 0; i < _nGlows; i++) {
+          const cg = _glowsBuf[i];
+          const dx = wx - cg.wx, dy = wy - cg.wy;
+          const d2 = dx * dx + dy * dy;
+          if (d2 > glowR2) continue;
+          const t = 1 - Math.sqrt(d2) / glowR;
+          const inten = t * glowA;
+          glowAR += cg.cR * inten;
+          glowAG += cg.cG * inten;
+          glowAB += cg.cB * inten;
+        }
       }
 
       // === 床 ===
@@ -343,9 +349,15 @@ function drawFloor() {
         const fX = ((wx * fpC) | 0) & fmx;
         const fY = ((wy * fpC) | 0) & fmy;
         const fT = (fY * ftw + fX) * 4;
-        r = ftBuf[fT]     * shade + FOG_R * fogA + glowAR;
-        g = ftBuf[fT + 1] * shade + FOG_G * fogA + glowAG;
-        b = ftBuf[fT + 2] * shade + FOG_B * fogA + glowAB;
+        if (hasGlow) {
+          r = ftBuf[fT]     * shade + FOG_R * fogA + glowAR;
+          g = ftBuf[fT + 1] * shade + FOG_G * fogA + glowAG;
+          b = ftBuf[fT + 2] * shade + FOG_B * fogA + glowAB;
+        } else {
+          r = ftBuf[fT]     * shade + FOG_R * fogA;
+          g = ftBuf[fT + 1] * shade + FOG_G * fogA;
+          b = ftBuf[fT + 2] * shade + FOG_B * fogA;
+        }
       } else {
         r = _floorBaseR; g = _floorBaseG; b = _floorBaseB;
       }
@@ -375,16 +387,22 @@ function drawFloor() {
         const cX = ((wx * cpC) | 0) & cmx;
         const cY = ((wy * cpC) | 0) & cmy;
         const cT = (cY * ctw + cX) * 4;
-        const cgMult = CRYSTAL_GLOW_WALL_RATIO;  // 天井は壁と同等の減衰比
-        let cr = ctBuf[cT]     * ceilShade + FOG_R * fogCA + glowAR * cgMult;
-        let cg = ctBuf[cT + 1] * ceilShade + FOG_G * fogCA + glowAG * cgMult;
-        let cb = ctBuf[cT + 2] * ceilShade + FOG_B * fogCA + glowAB * cgMult;
-        if (cr > 255) cr = 255;
-        if (cg > 255) cg = 255;
-        if (cb > 255) cb = 255;
-        cData[cOff]     = cr;
-        cData[cOff + 1] = cg;
-        cData[cOff + 2] = cb;
+        if (hasGlow) {
+          let cr = ctBuf[cT]     * ceilShade + FOG_R * fogCA + glowAR * ceilGlowMult;
+          let cg = ctBuf[cT + 1] * ceilShade + FOG_G * fogCA + glowAG * ceilGlowMult;
+          let cb = ctBuf[cT + 2] * ceilShade + FOG_B * fogCA + glowAB * ceilGlowMult;
+          if (cr > 255) cr = 255;
+          if (cg > 255) cg = 255;
+          if (cb > 255) cb = 255;
+          cData[cOff]     = cr;
+          cData[cOff + 1] = cg;
+          cData[cOff + 2] = cb;
+        } else {
+          // グロー無し時は texColor*shade + FOG*(1-shade) なので必ず 255 以下、クランプ不要
+          cData[cOff]     = ctBuf[cT]     * ceilShade + FOG_R * fogCA;
+          cData[cOff + 1] = ctBuf[cT + 1] * ceilShade + FOG_G * fogCA;
+          cData[cOff + 2] = ctBuf[cT + 2] * ceilShade + FOG_B * fogCA;
+        }
         cData[cOff + 3] = 255;
       } else {
         cData[cOff] = 15; cData[cOff + 1] = 18; cData[cOff + 2] = 25; cData[cOff + 3] = 255;

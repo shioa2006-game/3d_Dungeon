@@ -9,6 +9,65 @@ function getFactionForCell(gr, gc) {
 }
 
 // =====================
+// ミニマップ静的グリッドキャッシュ（##18 新D）
+//
+// 51×51 セルの「壁/通路」描画は迷路が変わるまで不変なので、
+// 1 度だけオフスクリーンに描いておき drawMinimap では drawImage で切り出すだけ。
+// プレイヤー位置の連続的な変化は drawImage の src 矩形オフセットで自然に追従。
+// グリッド外をパディング（4セル）して srcX/Y 負値を回避。
+// =====================
+const MINIMAP_PAD_CELLS = 4;
+let _minimapCache       = null;
+let _minimapCacheCtx    = null;
+let _minimapCachedGrid  = null;
+let _minimapCacheCellDraw = 0;
+
+function _buildMinimapCache(cellDraw) {
+  if (!_minimapCache) {
+    _minimapCache    = document.createElement('canvas');
+    _minimapCacheCtx = _minimapCache.getContext('2d');
+  }
+  const totalCells = GRID_SIZE + MINIMAP_PAD_CELLS * 2;
+  const dim        = Math.ceil(totalCells * cellDraw);
+  if (_minimapCache.width !== dim || _minimapCache.height !== dim) {
+    _minimapCache.width  = dim;
+    _minimapCache.height = dim;
+  }
+
+  const c2 = _minimapCacheCtx;
+
+  // 範囲外色で全体を埋める（パディング領域も含めて統一）
+  c2.fillStyle = 'rgb(6,6,6)';
+  c2.fillRect(0, 0, dim, dim);
+
+  // セル本体（壁/通路）
+  const grid = Game.state.grid;
+  const offset = MINIMAP_PAD_CELLS * cellDraw;
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const sx = offset + c * cellDraw;
+      const sy = offset + r * cellDraw;
+      c2.fillStyle = (grid[r][c] === 1) ? 'rgb(45,55,52)' : 'rgb(18,18,18)';
+      c2.fillRect(sx, sy, cellDraw + 1, cellDraw + 1);
+    }
+  }
+
+  // グリッド線
+  c2.strokeStyle = 'rgba(60,80,70,0.4)';
+  c2.lineWidth   = 1;
+  const lineMin  = offset;
+  const lineMax  = offset + GRID_SIZE * cellDraw;
+  for (let i = 0; i <= GRID_SIZE; i++) {
+    const p = offset + i * cellDraw;
+    c2.beginPath(); c2.moveTo(p, lineMin); c2.lineTo(p, lineMax); c2.stroke();
+    c2.beginPath(); c2.moveTo(lineMin, p); c2.lineTo(lineMax, p); c2.stroke();
+  }
+
+  _minimapCachedGrid    = grid;
+  _minimapCacheCellDraw = cellDraw;
+}
+
+// =====================
 // 全体マップ state（専用キャンバスで最前面表示）
 // =====================
 let _fmCanvas = null;
@@ -178,37 +237,15 @@ function drawMinimap() {
   const viewLeft = pcx - half;
   const viewTop  = pcy - half;
 
-  // セル描画
-  for (let dy = -1; dy <= MINIMAP_VIEW_CELLS; dy++) {
-    for (let dx = -1; dx <= MINIMAP_VIEW_CELLS; dx++) {
-      const gc = Math.floor(viewLeft + dx);
-      const gr = Math.floor(viewTop  + dy);
-      const sx = mapX0 + (gc - viewLeft) * cellDraw;
-      const sy = mapY0 + (gr - viewTop)  * cellDraw;
-
-      const outOfBounds = gc < 0 || gc >= GRID_SIZE || gr < 0 || gr >= GRID_SIZE;
-
-      if (outOfBounds) {
-        fillRect(sx, sy, cellDraw + 1, cellDraw + 1, 6, 6, 6);
-      } else if (grid[gr][gc] === 1) {
-        fillRect(sx, sy, cellDraw + 1, cellDraw + 1, 45, 55, 52);
-      } else {
-        // 陣営占有色は3Dビューの床に移植（##12 Step 3）
-        // 詳細な勢力図は M キー全体マップで確認する
-        fillRect(sx, sy, cellDraw + 1, cellDraw + 1, 18, 18, 18);
-      }
-    }
+  // ##18 新D: セル+グリッド線は静的キャッシュから drawImage で切り出し
+  if (_minimapCachedGrid !== grid || _minimapCacheCellDraw !== cellDraw) {
+    _buildMinimapCache(cellDraw);
   }
-
-  // グリッド線
-  for (let i = 0; i <= MINIMAP_VIEW_CELLS + 1; i++) {
-    const gc = Math.floor(viewLeft) + i;
-    const sx = mapX0 + (gc - viewLeft) * cellDraw;
-    const gr = Math.floor(viewTop)  + i;
-    const sy = mapY0 + (gr - viewTop)  * cellDraw;
-    if (sx >= R.x && sx <= R.x + R.w) drawLine(sx, R.y, sx, R.y + R.h, 60, 80, 70, 0.4, 1);
-    if (sy >= R.y && sy <= R.y + R.h) drawLine(R.x, sy, R.x + R.w, sy, 60, 80, 70, 0.4, 1);
-  }
+  const offset = MINIMAP_PAD_CELLS * cellDraw;
+  const srcX   = offset + viewLeft * cellDraw;
+  const srcY   = offset + viewTop  * cellDraw;
+  const visW   = MINIMAP_VIEW_CELLS * cellDraw;
+  ctx.drawImage(_minimapCache, srcX, srcY, visW, visW, mapX0, mapY0, visW, visW);
 
   // 詳細表示範囲の境界（プレイヤー中心の円・うっすら表示）
   const detailCx = mapX0 + half * cellDraw;

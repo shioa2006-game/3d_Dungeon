@@ -22,7 +22,10 @@ function _initFmCanvas() {
   _fmCtx = _fmCanvas.getContext('2d');
 }
 
-function toggleFullMap() { Game.flags.fullMapOpen = !Game.flags.fullMapOpen; }
+function toggleFullMap() {
+  Game.flags.fullMapOpen = !Game.flags.fullMapOpen;
+  Game.flags.forceRedraw = true;
+}
 
 // =====================
 // ミニマップ上のクリスタルドット

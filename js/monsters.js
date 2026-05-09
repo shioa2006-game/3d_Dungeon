@@ -310,20 +310,40 @@ function triggerMonsterTurn(pDestR, pDestC, skipAnimation = false) {
 
     let target = null;
     if (!foughtThisTurn.has(m)) {
-      // アグロ判定（human以外・retreating/healing でない場合のみ）
+      // アグロ判定（retreating/healing でない場合のみ）
       const aggroRange = UNIT_DEFS[m.type]?.aggroRange ?? 0;
-      if (aggroRange > 0 && m.faction !== 'human' && !m.retreating && !m.healing) {
-        const dist = Math.abs(m.gridR - pDestR) + Math.abs(m.gridC - pDestC);
-        if (dist <= aggroRange) {
-          m.aggroed = true;
-          const pathToPlayer = bfsPath(Game.state.grid, m.gridR, m.gridC, pDestR, pDestC);
-          if (pathToPlayer.length > 0) {
-            const step = pathToPlayer[0];
+      if (aggroRange > 0 && !m.retreating && !m.healing) {
+        // プレイヤーまでの距離（人間族はプレイヤーを追わない）
+        const distP = Math.abs(m.gridR - pDestR) + Math.abs(m.gridC - pDestC);
+        const playerInRange = m.faction !== 'human' && distP <= aggroRange;
+
+        // 最も近い異陣営NPCを射程内で探索
+        let nearestEnemy = null, distN = Infinity;
+        for (const e of Game.state.monsters) {
+          if (e === m || e.hp <= 0 || e.faction === m.faction || e.battleLocked) continue;
+          const d = Math.abs(e.gridR - m.gridR) + Math.abs(e.gridC - m.gridC);
+          if (d <= aggroRange && d < distN) { distN = d; nearestEnemy = e; }
+        }
+
+        // 優先順位: 距離が近い方、同距離ならプレイヤー優先
+        let aggroR = -1, aggroC = -1, aggroIsPlayer = false;
+        if (playerInRange && (nearestEnemy === null || distP <= distN)) {
+          aggroR = pDestR; aggroC = pDestC; aggroIsPlayer = true;
+        } else if (nearestEnemy !== null) {
+          aggroR = nearestEnemy.gridR; aggroC = nearestEnemy.gridC;
+        }
+
+        if (aggroR >= 0) {
+          // m.aggroed はプレイヤーバンプ用フラグなので、対象がプレイヤーのときのみ true
+          m.aggroed = aggroIsPlayer;
+          const pathToTarget = bfsPath(Game.state.grid, m.gridR, m.gridC, aggroR, aggroC);
+          if (pathToTarget.length > 0) {
+            const step = pathToTarget[0];
             if (!reserved.has(`${step.r},${step.c}`)) {
               target = step;
             }
           }
-          // プレイヤー方向へ進めない場合は徘徊
+          // 経路がふさがっている場合は徘徊にフォールバック
           if (!target) target = pickWanderTargetTurn(m, reserved);
         }
       }

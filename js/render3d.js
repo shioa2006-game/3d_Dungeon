@@ -162,22 +162,46 @@ for (let i = 0; i < EXP_TABLE_SIZE; i++) {
 // 床と天井は対称（horizon 距離が同じピクセルは同じ corrDist）なので
 // 1ループで両方を埋める。ImageData は再利用してアロケーションを避ける。
 //
-// ##18: ハーフ解像度レンダリング
+// ##18 ハーフ解像度レンダリング:
 //   FLOOR_RES_DIVISOR で per-pixel ループのコストを 1/N² に削減。
 //   オフスクリーンキャンバスに描いて drawImage で本キャンバスへ拡大コピー。
-//   テクスチャ自体に細部があるため拡大時の滲みは目立ちにくい。
+//
+// ##18 新E 回転中の更なる低解像度化:
+//   回転中は人間の視覚がモーションブラーで細部を識別しないので、
+//   さらに 1/3 解像度（合計 1/9 ピクセル）に落として per-frame コストを大幅削減。
+//   分解能の異なるバッファ群を遅延確保してキャッシュ。
 // =====================
-const FLOOR_RES_DIVISOR = 2;
+const FLOOR_RES_DIVISOR_NORMAL = 2;   // 静止/移動時の床/天井の解像度分母
+const FLOOR_RES_DIVISOR_ROT    = 3;   // 回転中の解像度分母
 const _floorBaseR = 20, _floorBaseG = 15, _floorBaseB = 10;
-let _floorImageData   = null;
-let _ceilingImageData = null;
-let _floorOffCanvas   = null;
-let _floorOffCtx      = null;
-let _ceilingOffCanvas = null;
-let _ceilingOffCtx    = null;
 const _rayCos  = new Float32Array(VIEW3D.w);
 const _raySin  = new Float32Array(VIEW3D.w);
 const _cosCorr = new Float32Array(VIEW3D.w);
+
+// 分解能ごとのバッファセット（再アロケーションを避けるためキャッシュ）
+const _floorBufferCache = new Map();
+function _getFloorBuffers(divisor) {
+  let bufs = _floorBufferCache.get(divisor);
+  if (bufs) return bufs;
+  const fullW = VIEW3D.w | 0;
+  const fullH = (VIEW3D.h / 2) | 0;
+  const fw = (fullW / divisor) | 0;
+  const fh = (fullH / divisor) | 0;
+  const off  = document.createElement('canvas'); off.width  = fw; off.height  = fh;
+  const cOff = document.createElement('canvas'); cOff.width = fw; cOff.height = fh;
+  bufs = {
+    fw, fh,
+    imageData:  ctx.createImageData(fw, fh),
+    cImageData: ctx.createImageData(fw, fh),
+    offCanvas:  off,
+    offCtx:     off.getContext('2d'),
+    cOffCanvas: cOff,
+    cOffCtx:    cOff.getContext('2d'),
+    corrNumer:  WALL_HEIGHT_CONST / (2 * divisor),
+  };
+  _floorBufferCache.set(divisor, bufs);
+  return bufs;
+}
 const _glowsBuf = [];
 let   _nGlows   = 0;
 
@@ -190,11 +214,14 @@ const _blockTintB = new Float32Array(26);
 function drawFloor() {
   const player = Game.state.player;
   const R = VIEW3D;
-  // 表示上のサイズと、ハーフ解像度での内部レンダリングサイズ
+  // 表示上のサイズと、内部レンダリングサイズ。回転中は更に低解像度化。
   const fullW = R.w | 0;
   const fullH = (R.h / 2) | 0;
-  const fw = (fullW / FLOOR_RES_DIVISOR) | 0;
-  const fh = (fullH / FLOOR_RES_DIVISOR) | 0;
+  const isRotating = Math.abs(player.visualAngle - player.angle) > ROT_SNAP_THRESHOLD;
+  const divisor = isRotating ? FLOOR_RES_DIVISOR_ROT : FLOOR_RES_DIVISOR_NORMAL;
+  const bufs = _getFloorBuffers(divisor);
+  const fw = bufs.fw;
+  const fh = bufs.fh;
 
   // 共通の事前計算：レイ方向、陣営タイント、グロー
   const half = player.fov / 2;
@@ -259,21 +286,8 @@ function drawFloor() {
   // テクスチャ未ロード時はベース色フォールバック
   const texReady = _floorTexData && _ceilTexData;
 
-  // ハーフ解像度の ImageData とオフスクリーンキャンバスを遅延確保
-  if (!_floorImageData || _floorImageData.width !== fw)   _floorImageData   = ctx.createImageData(fw, fh);
-  if (!_ceilingImageData || _ceilingImageData.width !== fw) _ceilingImageData = ctx.createImageData(fw, fh);
-  if (!_floorOffCanvas || _floorOffCanvas.width !== fw) {
-    _floorOffCanvas   = document.createElement('canvas');
-    _floorOffCanvas.width  = fw;
-    _floorOffCanvas.height = fh;
-    _floorOffCtx      = _floorOffCanvas.getContext('2d');
-    _ceilingOffCanvas = document.createElement('canvas');
-    _ceilingOffCanvas.width  = fw;
-    _ceilingOffCanvas.height = fh;
-    _ceilingOffCtx    = _ceilingOffCanvas.getContext('2d');
-  }
-  const fData = _floorImageData.data;
-  const cData = _ceilingImageData.data;
+  const fData = bufs.imageData.data;
+  const cData = bufs.cImageData.data;
 
   // 1行目（地平線）：暗いベース色
   let fIdx = 0;
@@ -304,8 +318,8 @@ function drawFloor() {
   const cExp = _ceilExpTable;
 
   // 内部解像度 y を「等価な全解像度 y」に補正してから corrDist を求める
-  // （全解像度で y=2 のピクセルに相当する位置を半解像度の y=1 がレンダリングする）
-  const CORR_DIST_NUMER = WALL_HEIGHT_CONST / (2 * FLOOR_RES_DIVISOR);
+  // （全解像度で y=N のピクセルに相当する位置を低解像度の y=1 がレンダリングする）
+  const CORR_DIST_NUMER = bufs.corrNumer;
   // ##18 新C: グロー無し時の高速パス（_nGlows==0 ならグロー累積と加算を完全スキップ）
   const hasGlow = _nGlows > 0;
   const ceilGlowMult = CRYSTAL_GLOW_WALL_RATIO;
@@ -410,11 +424,11 @@ function drawFloor() {
     }
   }
 
-  // ハーフ解像度の ImageData を一旦オフスクリーンに書いて、本キャンバスへ 2倍に拡大コピー
-  _ceilingOffCtx.putImageData(_ceilingImageData, 0, 0);
-  _floorOffCtx.putImageData(_floorImageData, 0, 0);
-  ctx.drawImage(_ceilingOffCanvas, 0, 0, fw, fh, R.x, R.y,           fullW, fullH);
-  ctx.drawImage(_floorOffCanvas,   0, 0, fw, fh, R.x, R.y + fullH,   fullW, fullH);
+  // 低解像度の ImageData を一旦オフスクリーンに書いて、本キャンバスへ拡大コピー
+  bufs.cOffCtx.putImageData(bufs.cImageData, 0, 0);
+  bufs.offCtx.putImageData(bufs.imageData,   0, 0);
+  ctx.drawImage(bufs.cOffCanvas, 0, 0, fw, fh, R.x, R.y,         fullW, fullH);
+  ctx.drawImage(bufs.offCanvas,  0, 0, fw, fh, R.x, R.y + fullH, fullW, fullH);
 }
 
 function drawView3D(hits) {
@@ -585,12 +599,93 @@ const _spritesBuffer = [];
 const _cellCounter   = new Map();
 const _monsterCellIdx = new Map();
 
-// スプライト着色用の使い回しオフスクリーンキャンバス
+// スプライト着色用の使い回しオフスクリーンキャンバス（フォールバック用）
 // （source-atop でスプライト形状のみ着色するため、透明背景の場で合成する必要がある）
 const _spriteTintCanvas = (typeof OffscreenCanvas !== 'undefined')
   ? new OffscreenCanvas(256, 256)
   : (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 256; return c; })();
 const _spriteTintCtx = _spriteTintCanvas.getContext('2d');
+
+// =====================
+// ##18 A2: 着色済みスプライトの LRU キャッシュ
+//
+// 同じ (種族×向き×シェード段×光源色段) のスプライトが連続フレームで使われる
+// 想定で、オフスクリーン合成結果をキャッシュする。Map の挿入順を LRU として
+// 使い、上限を超えたら最古エントリを破棄しキャンバスは再利用。
+// シェードと光源色をビン分けすることで、連続変化でもキャッシュが効く。
+// =====================
+const SPRITE_CACHE_MAX        = 48;
+const SPRITE_SHADE_BINS       = 8;
+const SPRITE_GLOW_BINS_PER_CH = 4;   // RGB 各チャンネル 4 段階 → 64 通り
+const _spriteCacheTinted = new Map();   // key → { canvas }
+
+function _getCachedTintedSprite(img, type, dir, distShade, glowR, glowG, glowB) {
+  const hasGlow = (glowR + glowG + glowB) > 1;
+  const sBin = Math.min(SPRITE_SHADE_BINS - 1, Math.max(0, (distShade * SPRITE_SHADE_BINS) | 0));
+  const binStep = 256 / SPRITE_GLOW_BINS_PER_CH;
+  let key;
+  if (hasGlow) {
+    const gRb = (glowR / binStep) | 0;
+    const gGb = (glowG / binStep) | 0;
+    const gBb = (glowB / binStep) | 0;
+    key = `${type}|${dir}|${sBin}|${gRb},${gGb},${gBb}`;
+  } else {
+    key = `${type}|${dir}|${sBin}|n`;
+  }
+
+  // ヒット → LRU 末尾に移動して返す
+  const hit = _spriteCacheTinted.get(key);
+  if (hit) {
+    _spriteCacheTinted.delete(key);
+    _spriteCacheTinted.set(key, hit);
+    return hit.canvas;
+  }
+
+  // ミス → エントリ生成（必要なら最古を退去してキャンバスを再利用）
+  let canvas;
+  if (_spriteCacheTinted.size >= SPRITE_CACHE_MAX) {
+    const firstKey = _spriteCacheTinted.keys().next().value;
+    canvas = _spriteCacheTinted.get(firstKey).canvas;
+    _spriteCacheTinted.delete(firstKey);
+  } else {
+    canvas = document.createElement('canvas');
+  }
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  if (canvas.width !== w)  canvas.width  = w;
+  if (canvas.height !== h) canvas.height = h;
+
+  const c2 = canvas.getContext('2d');
+  c2.globalCompositeOperation = 'source-over';
+  c2.globalAlpha = 1;
+  c2.clearRect(0, 0, w, h);
+  c2.drawImage(img, 0, 0);
+
+  // ビン代表値で減光を適用（ビン中央の shade 値）
+  const repShade = (sBin + 0.5) / SPRITE_SHADE_BINS;
+  if (repShade < 0.999) {
+    c2.globalCompositeOperation = 'source-atop';
+    c2.fillStyle = `rgba(0,0,0,${1 - repShade})`;
+    c2.fillRect(0, 0, w, h);
+  }
+
+  if (hasGlow) {
+    const SPRITE_GLOW_TINT_MAX = 0.45;
+    const maxCh = glowR > glowG ? (glowR > glowB ? glowR : glowB) : (glowG > glowB ? glowG : glowB);
+    const tintA = Math.min(SPRITE_GLOW_TINT_MAX, maxCh / 255 * 1.2);
+    // 中央値で代表（連続値からビン代表に置換）
+    const gRb = ((glowR / binStep) | 0) * binStep + binStep / 2;
+    const gGb = ((glowG / binStep) | 0) * binStep + binStep / 2;
+    const gBb = ((glowB / binStep) | 0) * binStep + binStep / 2;
+    c2.globalCompositeOperation = 'source-atop';
+    c2.fillStyle = `rgba(${Math.min(255, gRb | 0)},${Math.min(255, gGb | 0)},${Math.min(255, gBb | 0)},${tintA})`;
+    c2.fillRect(0, 0, w, h);
+  }
+  c2.globalCompositeOperation = 'source-over';
+
+  _spriteCacheTinted.set(key, { canvas });
+  return canvas;
+}
 
 /**
  * モンスターとクリスタルを Z-sort（遠→近）してテクスチャ描画。
@@ -702,45 +797,15 @@ function drawSprites() {
       const spriteLeft = screenXCent - spriteW / 2;
       const spriteTop  = floorY - spriteH;
 
-      // === オフスクリーンに「減光 + グロー着色済み」のスプライトを合成 ===
+      // === ##18 A2: 着色済みスプライトを LRU キャッシュから取得 ===
       const totalGlow = glowAddR + glowAddG + glowAddB;
       const needTint  = totalGlow > 1;
       const needShade = distShade < 0.999;
       const tintW     = img.naturalWidth;
       const tintH     = img.naturalHeight;
-
-      let srcImg;
-      if (needTint || needShade) {
-        if (_spriteTintCanvas.width  < tintW) _spriteTintCanvas.width  = tintW;
-        if (_spriteTintCanvas.height < tintH) _spriteTintCanvas.height = tintH;
-        _spriteTintCtx.clearRect(0, 0, tintW, tintH);
-        // フル不透明で描画（透明にせず、後で source-atop で減光する）
-        _spriteTintCtx.drawImage(img, 0, 0);
-        // 距離による減光：source-atop で黒オーバーレイ（スプライト形状のみ暗くなる、不透明性は維持）
-        if (needShade) {
-          _spriteTintCtx.globalCompositeOperation = 'source-atop';
-          _spriteTintCtx.fillStyle = `rgba(0,0,0,${1 - distShade})`;
-          _spriteTintCtx.fillRect(0, 0, tintW, tintH);
-        }
-        // クリスタルグロー着色（減光後の色に乗せる）
-        if (needTint) {
-          const maxCh = glowAddR > glowAddG ? (glowAddR > glowAddB ? glowAddR : glowAddB)
-                                            : (glowAddG > glowAddB ? glowAddG : glowAddB);
-          const tintA = Math.min(SPRITE_GLOW_TINT_MAX, maxCh / 255 * 1.2);
-          const gR = glowAddR > 255 ? 255 : glowAddR | 0;
-          const gG = glowAddG > 255 ? 255 : glowAddG | 0;
-          const gB = glowAddB > 255 ? 255 : glowAddB | 0;
-          if (!needShade) _spriteTintCtx.globalCompositeOperation = 'source-atop';
-          _spriteTintCtx.fillStyle = `rgba(${gR},${gG},${gB},${tintA})`;
-          _spriteTintCtx.fillRect(0, 0, tintW, tintH);
-        }
-        if (needShade || needTint) {
-          _spriteTintCtx.globalCompositeOperation = 'source-over';
-        }
-        srcImg = _spriteTintCanvas;
-      } else {
-        srcImg = img;
-      }
+      const srcImg = (needTint || needShade)
+        ? _getCachedTintedSprite(img, m.type, dir, distShade, glowAddR, glowAddG, glowAddB)
+        : img;
 
       const colStart = Math.max(0,             Math.floor(spriteLeft / colW));
       const colEnd   = Math.min(RAY_COUNT - 1, Math.ceil((spriteLeft + spriteW) / colW));

@@ -21,7 +21,10 @@
       "Bash(sed -n '26302,26370p' gamelog_20260502_185400_GAMEOVER.json)",
       "Bash(sed -n '6,7p' gamelog_20260502_190733_CLEAR.json)",
       "Bash(sed -n '26377,26445p' gamelog_20260502_190733_CLEAR.json)",
-      "Bash(node \"C:/Users/shioa/Documents/1_ProgramFiles/3d_Dungeon/tmp_analyze_iter3.js\")"
+      "Bash(node \"C:/Users/shioa/Documents/1_ProgramFiles/3d_Dungeon/tmp_analyze_iter3.js\")",
+      "Bash(python3 -c ' *)",
+      "Bash(python -c ' *)",
+      "Bash(python -sc ' *)"
     ]
   }
 }

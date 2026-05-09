@@ -127,8 +127,8 @@ const cellBlockIdx = (() => {
 // =====================
 // Crystal spawn intervals (turns)
 // =====================
-const HUMAN_SPAWN_COOLDOWN = 13;
-const AI_SPAWN             = { goblin: 8, lizard: 13, ogre: 18 };
+const HUMAN_SPAWN_COOLDOWN = 12;
+const AI_SPAWN             = { goblin: 8, lizard: 13, ogre: 20 };
 const UNIT_CAP_MAX         = 100;
 const UNIT_CAP_PER_CRYSTAL = 5;
 
@@ -136,12 +136,12 @@ const UNIT_CAP_PER_CRYSTAL = 5;
 // Unit definitions（playtest.html と同値）
 // =====================
 const UNIT_DEFS = {
-  human:  { hp: 35, atk: 5, faction: 'human',  sizeScale: 1.00 },
-  elf:    { hp: 30, atk: 6, faction: 'human',  sizeScale: 1.00 },
-  dwarf:  { hp: 40, atk: 4, faction: 'human',  sizeScale: 0.85 },
-  goblin: { hp: 28, atk: 5, faction: 'goblin', sizeScale: 0.65, aggroRange: 1 },
-  lizard: { hp: 28, atk: 7, faction: 'lizard', sizeScale: 1.00, aggroRange: 2 },
-  ogre:   { hp: 44, atk: 6, faction: 'ogre',   sizeScale: 1.10, aggroRange: 3 },
+  human:  { hp: 35, atk: 5, faction: 'human',  sizeScale: 1.00, aggroRange: 2 },
+  elf:    { hp: 30, atk: 6, faction: 'human',  sizeScale: 1.00, aggroRange: 2 },
+  dwarf:  { hp: 40, atk: 4, faction: 'human',  sizeScale: 0.85, aggroRange: 2 },
+  goblin: { hp: 28, atk: 4, faction: 'goblin', sizeScale: 0.65, aggroRange: 2 },
+  lizard: { hp: 35, atk: 5, faction: 'lizard', sizeScale: 1.00, aggroRange: 2 },
+  ogre:   { hp: 44, atk: 6, faction: 'ogre',   sizeScale: 1.10, aggroRange: 2 },
 };
 
 const AI_UNIT          = { goblin: 'goblin', lizard: 'lizard', ogre: 'ogre' };
@@ -151,6 +151,8 @@ const HUMAN_AUTO_TYPES = ['human', 'elf', 'dwarf'];
 const AFFINITY_DEBUFF = new Set([
   'human-goblin', 'elf-lizard',   'dwarf-ogre',
   'goblin-ogre',  'lizard-goblin', 'ogre-lizard',
+  // 守備側相性（人間族の構造的不利を補正、##19 計測2回目を経て追加）
+  'goblin-human', 'lizard-elf',   'ogre-dwarf',
 ]);
 function getAffinityMult(attackerType, defenderType) {
   return AFFINITY_DEBUFF.has(`${attackerType}-${defenderType}`) ? 0.7 : 1.0;

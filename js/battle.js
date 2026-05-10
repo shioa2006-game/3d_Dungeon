@@ -435,14 +435,17 @@ function playerDeath(killerRace) {
   // 守り切れば最後の1個に復活する設計とする。
   player.gold = Math.floor(player.gold / 2);
 
-  // 装備1個ランダムロスト（Iteration 1：死亡ペナルティ強化）
-  const equippedSlots = ['weapon', 'armor', 'accessory'].filter(s => player.equip[s]);
+  // 装備1個ロスト（##19 計測7後：accessory → armor → weapon の優先順で消失。
+  //                武器が残りやすくなりプレイヤーの戦闘力を維持しやすくする）
+  const lostOrder = ['accessory', 'armor', 'weapon'];
   let lostEquip = null;
-  if (equippedSlots.length > 0) {
-    const slot = equippedSlots[Math.floor(Math.random() * equippedSlots.length)];
-    lostEquip = { slot, name: player.equip[slot].name };
-    player.equip[slot] = null;
-    logMessage(`💢 ${lostEquip.name} を失った！`, 'battle');
+  for (const slot of lostOrder) {
+    if (player.equip[slot]) {
+      lostEquip = { slot, name: player.equip[slot].name };
+      player.equip[slot] = null;
+      logMessage(`💢 ${lostEquip.name} を失った！`, 'battle');
+      break;
+    }
   }
 
   GameLog.event('player_death', {

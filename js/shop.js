@@ -31,13 +31,20 @@ function healAtCrystal() {
 // ショップを開く（E キー）
 // =====================
 function openShop() {
+  const player    = Game.state.player;
   const onCrystal = Game.state.onCrystal;
   if (!onCrystal || Game.state.battleState || Game.state.shopItems || Game.flags.gameEnded) return;
   if (!onCrystal.valid) {
     logMessage('⚠️ このクリスタルは本拠地から切断されています', 'system');
     return;
   }
-  const pool  = shuffle([...SHOP_POOL]);
+  // ##19 計測7後の調整：所持中（装備中）アイテムをショップから除外
+  const equippedNames = new Set(
+    ['weapon', 'armor', 'accessory']
+      .map(s => player.equip[s]?.name)
+      .filter(Boolean)
+  );
+  const pool  = shuffle([...SHOP_POOL].filter(it => !equippedNames.has(it.name)));
   Game.state.shopItems        = pool.slice(0, SHOP_ROLL_N);
   Game.state.shopSelectedIdx  = 0;
   GameLog.event('shop_open', {
@@ -48,6 +55,8 @@ function openShop() {
   });
   renderShop();
   document.getElementById('shop-modal').hidden = false;
+  // ##19 計測7後の調整：開店ごとに1ターン消費（無限リロード抑制）
+  triggerMonsterTurn(player.gridR, player.gridC);
 }
 
 function renderShop() {

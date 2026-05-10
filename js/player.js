@@ -45,7 +45,7 @@ function markExplored() {
 function initPlayerStats() {
   const player = Game.state.player;
   player.hp   = PLAYER_INIT.hp;
-  player.gold = 0;
+  player.gold = 40;   // 初期ゴールド付与（##19 計測7後の調整：序盤の装備購入を可能に）
   player.equip = { weapon: null, armor: null, accessory: null };
 }
 

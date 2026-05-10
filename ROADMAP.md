@@ -220,6 +220,11 @@
 
 **完了条件**：1プレイが締まりのある体験になる（10〜30分でクリア or 敗北）。
 
+**ステータス（2026-05-10 時点）**
+- バランス調整シリーズが [BALANCE_TUNING_LOG.md Iter#1〜#5](BALANCE_TUNING_LOG.md) と [IMPL_NOTES.md ##19](IMPL_NOTES.md) にて完了
+- 計測8（10ゲーム / 4468ターン）で **CLEAR/GAMEOVER 50/50**、**4陣営すべて勝利可能**、**プレイヤー戦闘勝率90%** を達成
+- 最終確定値は [INDEX_SPEC.md](INDEX_SPEC.md) を参照
+
 ---
 
 ## 依存関係

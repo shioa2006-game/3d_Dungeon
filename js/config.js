@@ -128,7 +128,7 @@ const cellBlockIdx = (() => {
 // Crystal spawn intervals (turns)
 // =====================
 const HUMAN_SPAWN_COOLDOWN = 12;
-const AI_SPAWN             = { goblin: 8, lizard: 13, ogre: 20 };
+const AI_SPAWN             = { goblin: 7, lizard: 13, ogre: 20 };
 const UNIT_CAP_MAX         = 100;
 const UNIT_CAP_PER_CRYSTAL = 5;
 
@@ -139,9 +139,9 @@ const UNIT_DEFS = {
   human:  { hp: 35, atk: 5, faction: 'human',  sizeScale: 1.00, aggroRange: 2 },
   elf:    { hp: 30, atk: 6, faction: 'human',  sizeScale: 1.00, aggroRange: 2 },
   dwarf:  { hp: 40, atk: 4, faction: 'human',  sizeScale: 0.85, aggroRange: 2 },
-  goblin: { hp: 28, atk: 4, faction: 'goblin', sizeScale: 0.65, aggroRange: 2 },
+  goblin: { hp: 30, atk: 4, faction: 'goblin', sizeScale: 0.65, aggroRange: 2 },
   lizard: { hp: 35, atk: 5, faction: 'lizard', sizeScale: 1.00, aggroRange: 2 },
-  ogre:   { hp: 44, atk: 6, faction: 'ogre',   sizeScale: 1.10, aggroRange: 2 },
+  ogre:   { hp: 42, atk: 6, faction: 'ogre',   sizeScale: 1.10, aggroRange: 2 },
 };
 
 const AI_UNIT          = { goblin: 'goblin', lizard: 'lizard', ogre: 'ogre' };
@@ -245,7 +245,7 @@ function hexToRgb(hex) {
 // =====================
 // プレイヤー定数
 // =====================
-const PLAYER_INIT = { hp: 40, atk: 7, rec: 5, agi: 10 };
+const PLAYER_INIT = { hp: 45, atk: 7, rec: 5, agi: 10 };
 const FLEE_BASE   = 0.5;
 function goldDrop() { return 10 + Math.floor(Math.random() * 11); }
 

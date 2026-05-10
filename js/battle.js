@@ -484,6 +484,11 @@ function checkWinLoss() {
 
 function showResult(kind, detail) {
   Game.flags.gameEnded = true;
+  // 全体マップ（z-index:50）が結果画面（z-index:30）を覆い隠さないよう強制的に閉じる
+  if (Game.flags.fullMapOpen) {
+    Game.flags.fullMapOpen = false;
+    Game.flags.forceRedraw = true;
+  }
   const title = document.getElementById('result-title');
   title.textContent = kind === 'win' ? '🎉 VICTORY' : '💀 DEFEAT';
   title.className   = 'result-title ' + (kind === 'win' ? 'result-win' : 'result-lose');

@@ -9,7 +9,11 @@
 // =====================
 
 const Title = (() => {
-  const LOG_PREF_KEY = 'crystalLib_logEnabled';
+  // v2: デフォルトを OFF に切り替えた際にキー名を更新。
+  // 旧キー 'crystalLib_logEnabled' に残っていた "true"（旧デフォルトで保存された値）を
+  // 引き継がないようにし、既存ユーザにも新デフォルト（OFF）を一度だけ適用する。
+  const LOG_PREF_KEY     = 'crystalLib_logEnabled_v2';
+  const LOG_PREF_KEY_OLD = 'crystalLib_logEnabled';
   let assetsReady = false;   // 全画像のロード完了フラグ
 
   function _isShown() {
@@ -32,7 +36,7 @@ const Title = (() => {
   function _startGame() {
     if (!assetsReady) return;   // ロード未完了時はゲーム開始しない
     const checkbox   = document.getElementById('title-log-toggle');
-    const logEnabled = checkbox ? checkbox.checked : true;
+    const logEnabled = checkbox ? checkbox.checked : false;
     GameLog.setEnabled(logEnabled);
     try { localStorage.setItem(LOG_PREF_KEY, String(logEnabled)); } catch (_) {}
     hide();
@@ -95,8 +99,10 @@ const Title = (() => {
   }
 
   function init() {
-    // 保存された設定の復元（既定は true）
+    // 保存された設定の復元（既定は OFF）
     try {
+      // 旧キーは既に役目を終えたので削除（v1→v2 移行）
+      localStorage.removeItem(LOG_PREF_KEY_OLD);
       const saved = localStorage.getItem(LOG_PREF_KEY);
       if (saved !== null) {
         const checkbox = document.getElementById('title-log-toggle');

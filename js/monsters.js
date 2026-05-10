@@ -177,7 +177,7 @@ function updateTerritoryAI(foughtThisTurn) {
           capturer: { kind: 'unit', race: m.type, faction: m.faction },
         });
         if (prevOwner === 'human') {
-          logMessage(`💥 人間族クリスタルが${FACTIONS[m.faction].name}に占領された！`, 'occupy');
+          logMessage(`💥 ${FACTIONS[m.faction].name}がクリスタルを占領！`, 'occupy');
         }
         checkWinLoss();
       }

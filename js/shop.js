@@ -11,7 +11,7 @@ function healAtCrystal() {
   const onCrystal = Game.state.onCrystal;
   if (!onCrystal || Game.state.battleState || Game.state.shopItems || Game.flags.gameEnded) return;
   if (!onCrystal.valid) {
-    logMessage('⚠️ このクリスタルは本拠地から切断されています', 'system');
+    logMessage('⚠️ 本拠地から切断されています', 'system');
     return;
   }
   const player = Game.state.player;
@@ -35,7 +35,7 @@ function openShop() {
   const onCrystal = Game.state.onCrystal;
   if (!onCrystal || Game.state.battleState || Game.state.shopItems || Game.flags.gameEnded) return;
   if (!onCrystal.valid) {
-    logMessage('⚠️ このクリスタルは本拠地から切断されています', 'system');
+    logMessage('⚠️ 本拠地から切断されています', 'system');
     return;
   }
   // ##19 計測7後の調整：所持中（装備中）アイテムをショップから除外
